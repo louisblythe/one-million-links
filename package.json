@@ -1,32 +1,17 @@
 {
-  "name": "my-app",
+  "name": "linkforadollar",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --profile",
-    "build": "tsc -b && vite build",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "convex": "^1.12.2",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-use": "^17.5.0",
-    "react-window": "^1.8.10"
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "d1:migrate:local": "wrangler d1 migrations apply linkforadollar --local",
+    "d1:migrate:remote": "wrangler d1 migrations apply linkforadollar --remote"
   },
   "devDependencies": {
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "@types/react-window": "^1.8.8",
-    "@typescript-eslint/eslint-plugin": "^7.13.1",
-    "@typescript-eslint/parser": "^7.13.1",
-    "@vitejs/plugin-react": "^4.3.1",
-    "eslint": "^8.57.0",
-    "eslint-plugin-react-hooks": "^4.6.2",
-    "eslint-plugin-react-refresh": "^0.4.7",
-    "typescript": "^5.2.2",
-    "vite": "^5.3.1"
+    "node-addon-api": "^8.8.0",
+    "node-gyp": "^12.3.0",
+    "wrangler": "^4.95.0"
   }
 }

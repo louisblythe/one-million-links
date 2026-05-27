@@ -1,0 +1,34 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "linkforadollar",
+  "account_id": "b516ddd12e9d176c6a29d061f0d2b7a6",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-05-27",
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "linkforadollar.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.linkforadollar.com",
+      "custom_domain": true
+    }
+  ],
+  "vars": {
+    "APP_URL": "https://linkforadollar.com",
+    "APP_CURRENCY": "usd",
+    "STRIPE_PRODUCT_ID": "prod_Uam47pbENlHbmX"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "linkforadollar",
+      "database_id": "93764ded-3f29-4a78-8169-13b325c4b1a7",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

@@ -11,6 +11,11 @@ node_modules
 dist
 dist-ssr
 *.local
+vendor
+.env
+storage/*.sqlite
+storage/*.sqlite-*
+.playwright-mcp
 
 # Editor directories and files
 .vscode/*

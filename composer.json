@@ -1,0 +1,13 @@
+{
+  "name": "one-million-links/app",
+  "description": "A PHP Link for a Dollar app with Stripe Checkout.",
+  "type": "project",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.2",
+    "stripe/stripe-php": "^17.0"
+  },
+  "scripts": {
+    "serve": "php -S 127.0.0.1:8080 -t public public/router.php"
+  }
+}
