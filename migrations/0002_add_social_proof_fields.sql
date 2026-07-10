@@ -1,2 +1,2 @@
-ALTER TABLE squares ADD COLUMN category TEXT NOT NULL DEFAULT 'Other';
-ALTER TABLE squares ADD COLUMN click_count INTEGER NOT NULL DEFAULT 0;
+-- Social proof fields are covered by 0002_add_gamification_fields.sql.
+SELECT 1;

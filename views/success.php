@@ -3,9 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Square claimed | Link for a Dollar</title>
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/assets/app.css">
+    <?= seo_head('Square claimed | Link for a Dollar', 'Your paid public square is live on the Link for a Dollar discovery board.', '/success', 'noindex, follow') ?>
   </head>
   <body>
     <main class="message-page">

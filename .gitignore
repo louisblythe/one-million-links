@@ -16,6 +16,7 @@ vendor
 storage/*.sqlite
 storage/*.sqlite-*
 .playwright-mcp
+.wrangler/
 
 # Editor directories and files
 .vscode/*

@@ -3,9 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Link for a Dollar</title>
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/assets/app.css">
+    <?= seo_head('Page not found | Link for a Dollar', 'The requested Link for a Dollar page could not be found. Return to the public discovery board.', null, 'noindex, follow') ?>
   </head>
   <body>
     <main class="message-page">

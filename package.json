@@ -4,8 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "build:worker-assets": "node scripts/build-worker-assets.mjs",
     "dev": "wrangler dev",
+    "predeploy": "npm run build:worker-assets",
     "deploy": "wrangler deploy",
+    "test:seo": "node scripts/seo-audit.mjs",
     "d1:migrate:local": "wrangler d1 migrations apply linkforadollar --local",
     "d1:migrate:remote": "wrangler d1 migrations apply linkforadollar --remote"
   },
