@@ -72,6 +72,10 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
               <option value="Local business">Local business</option>
               <option value="Other">Other</option>
             </select>
+            <div class="view-toggle" role="group" aria-label="Choose board view">
+              <button class="view-toggle__button" id="listViewButton" type="button" aria-pressed="false" aria-controls="directoryList">List</button>
+              <button class="view-toggle__button is-active" id="gridViewButton" type="button" aria-pressed="true" aria-controls="grid">Grid</button>
+            </div>
             <div class="zoom-controls" aria-label="Zoom controls">
               <button class="tool-button" id="zoomOut" type="button" aria-label="Zoom out">-</button>
               <input id="zoomRange" class="zoom-range" type="range" min="1" max="32" step="1" value="4" aria-label="Zoom level">
@@ -80,6 +84,16 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
             </div>
           </div>
           <canvas id="grid" width="1000" height="1000" aria-label="One million selectable squares"></canvas>
+          <div id="directoryList" class="directory-list" aria-label="Claimed link directory" hidden>
+            <div class="directory-list__header">
+              <div>
+                <p class="eyebrow">Public directory</p>
+                <h2>Links people are visiting</h2>
+              </div>
+              <p id="directoryCount" class="directory-list__count"></p>
+            </div>
+            <ol id="directoryRows" class="directory-rows"></ol>
+          </div>
           <div class="hover-preview" id="hoverPreview" hidden></div>
         </div>
 
@@ -234,6 +248,6 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
     <script>
       window.__PAID_SQUARES__ = <?= $squaresJson ?>;
     </script>
-    <script src="/assets/app.js?v=20260710-seo2" defer></script>
+    <script src="/assets/app.js?v=20260821-directory" defer></script>
   </body>
 </html>

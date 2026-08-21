@@ -19,7 +19,7 @@ function replaceEmbeddedAsset(source, functionName, value) {
   if (!pattern.test(source)) {
     throw new Error(`Could not find embedded ${functionName}() asset.`);
   }
-  return source.replace(pattern, replacement);
+  return source.replace(pattern, () => replacement);
 }
 
 let nextWorker = replaceEmbeddedAsset(workerSource, "css", css);

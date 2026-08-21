@@ -34,6 +34,12 @@ const searchResults = document.getElementById("searchResults");
 const categoryFilter = document.getElementById("categoryFilter");
 const packSizeInput = document.getElementById("pack_size");
 const checkoutButton = document.getElementById("checkoutButton");
+const gridViewButton = document.getElementById("gridViewButton");
+const listViewButton = document.getElementById("listViewButton");
+const directoryList = document.getElementById("directoryList");
+const directoryRows = document.getElementById("directoryRows");
+const directoryCount = document.getElementById("directoryCount");
+const zoomControls = document.querySelector(".zoom-controls");
 
 const rawSquares = window.__PAID_SQUARES__ || [];
 const allSquares = rawSquares.map((square) => {
@@ -70,6 +76,7 @@ let originX = 0;
 let originY = 0;
 let isPanning = false;
 let panStart = null;
+let activeView = localStorage.getItem("linkforadollar:view") === "list" ? "list" : "grid";
 
 function hashString(value) {
   let hash = 0;
@@ -642,8 +649,54 @@ function applyFilters() {
   visibleSquareIds = new Set(visibleSquares.map((square) => square.id));
   clusters = buildClusters(visibleSquares);
   renderSearchResults(query);
+  renderDirectory();
   updateMomentum();
   drawGrid();
+}
+
+function setActiveView(view) {
+  activeView = view === "list" ? "list" : "grid";
+  const isList = activeView === "list";
+
+  canvas.hidden = isList;
+  directoryList.hidden = !isList;
+  zoomControls.hidden = isList;
+  listViewButton.classList.toggle("is-active", isList);
+  gridViewButton.classList.toggle("is-active", !isList);
+  listViewButton.setAttribute("aria-pressed", String(isList));
+  gridViewButton.setAttribute("aria-pressed", String(!isList));
+  localStorage.setItem("linkforadollar:view", activeView);
+
+  if (!isList) {
+    requestAnimationFrame(resizeCanvas);
+  }
+}
+
+function renderDirectory() {
+  const ranked = [...visibleSquares].sort((left, right) => right.clickCount - left.clickCount || String(right.paidAt).localeCompare(String(left.paidAt)) || left.id - right.id);
+  directoryCount.textContent = `${ranked.length.toLocaleString()} claimed link${ranked.length === 1 ? "" : "s"}`;
+
+  directoryRows.innerHTML = ranked.length ? ranked.map((square, index) => `
+    <li class="directory-row">
+      <span class="directory-row__rank" aria-label="Rank ${index + 1}">#${index + 1}</span>
+      <span class="mini-logo" style="background:${square.color}">${escapeHtml(initials(square.label, square.host))}</span>
+      <span class="directory-row__identity">
+        <strong><a href="/squares/${square.id + 1}">${escapeHtml(square.label)}</a></strong>
+        <span>${escapeHtml(square.host || square.url)}</span>
+        <span>${escapeHtml(square.category)} · square #${square.id + 1}</span>
+      </span>
+      <span class="directory-row__metric">
+        <strong>${formattedClicks(square.clickCount)}</strong>
+        <span>click${square.clickCount === 1 ? "" : "s"}</span>
+      </span>
+      <a class="directory-row__visit" href="${escapeHtml(visitHref(square.id))}" target="_blank" rel="noopener">Visit <span aria-hidden="true">↗</span></a>
+    </li>
+  `).join("") : `
+    <li class="directory-empty">
+      <strong>No claimed links match this view</strong>
+      <span>Try another search or category.</span>
+    </li>
+  `;
 }
 
 function renderSearchResults(query) {
@@ -885,12 +938,15 @@ categoryFilter.addEventListener("change", () => {
   applyFilters();
   fitToOccupied();
 });
+listViewButton.addEventListener("click", () => setActiveView("list"));
+gridViewButton.addEventListener("click", () => setActiveView("grid"));
 window.addEventListener("resize", resizeCanvas);
 
 zoomRange.value = String(zoom);
 resizeCanvas();
 renderPanels();
 applyFilters();
+setActiveView(activeView);
 const initialSelection = Number(squareInput.value || 1) - 1;
 if (allSquares.length > 0 && initialSelection <= 0) {
   focusFeaturedBlock();
