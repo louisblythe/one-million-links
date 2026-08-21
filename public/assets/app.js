@@ -73,6 +73,7 @@ const allSquares = rawSquares.map((square) => {
     purchaseCountry: square.purchase_country || "",
     purchaseLatitude: square.purchase_latitude == null ? Number.NaN : Number(square.purchase_latitude),
     purchaseLongitude: square.purchase_longitude == null ? Number.NaN : Number(square.purchase_longitude),
+    locationSource: square.location_source || "checkout",
     paidAt,
     color: CATEGORY_COLORS[category] || CLAIM_COLORS[Math.abs(hashString(`${square.label}-${square.url}`)) % CLAIM_COLORS.length],
   };
@@ -741,6 +742,7 @@ function purchaseLocationGeoJson() {
         label: square.label,
         host: square.host,
         location: [square.purchaseCity, square.purchaseCountry].filter(Boolean).join(", ") || "Approximate location",
+        sourceLabel: square.locationSource === "estimated_headquarters" ? "Estimated headquarters" : "Checkout location",
         color: square.color,
       },
     })),
@@ -823,7 +825,7 @@ function initializePurchaseMap() {
       const properties = feature.properties || {};
       new window.maplibregl.Popup({ offset: 12 })
         .setLngLat(feature.geometry.coordinates)
-        .setHTML(`<strong>${escapeHtml(properties.label || "Claimed link")}</strong><span>${escapeHtml(properties.location || "")}</span><a href="/squares/${Number(properties.id) + 1}">View ${escapeHtml(properties.host || "link")}</a>`)
+        .setHTML(`<strong>${escapeHtml(properties.label || "Claimed link")}</strong><span>${escapeHtml(properties.location || "")}</span><span>${escapeHtml(properties.sourceLabel || "Approximate location")}</span><a href="/squares/${Number(properties.id) + 1}">View ${escapeHtml(properties.host || "link")}</a>`)
         .addTo(purchaseMap);
     });
     purchaseMap.on("click", "purchase-clusters", async (event) => {

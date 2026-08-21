@@ -100,18 +100,18 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
           <section id="purchaseMapPanel" class="purchase-map-panel" aria-labelledby="purchase-map-title" hidden>
             <div class="directory-list__header">
               <div>
-                <p class="eyebrow">Purchase locations</p>
-                <h2 id="purchase-map-title">Links claimed around the world</h2>
+                <p class="eyebrow">Listing locations</p>
+                <h2 id="purchase-map-title">Claimed links around the world</h2>
               </div>
               <p id="mapLocationCount" class="directory-list__count"></p>
             </div>
-            <div id="purchaseMap" class="purchase-map" aria-label="World map of coarse purchase locations"></div>
+            <div id="purchaseMap" class="purchase-map" aria-label="World map of approximate listing locations"></div>
             <div id="mapEmptyState" class="map-empty-state" hidden>
               <strong>The map is ready for its first location</strong>
-              <span>New purchases appear here using coarse city-level location. We do not store IP addresses.</span>
+              <span>New claims appear here using an approximate headquarters or checkout location.</span>
               <button type="button" data-focus-claim>Claim the first mapped link</button>
             </div>
-            <p class="map-privacy-note">Locations are approximate and captured at checkout from Cloudflare city-level geolocation. We do not store IP addresses.</p>
+            <p class="map-privacy-note">Existing listings use estimated headquarters locations. New claims use approximate city-level checkout locations from Cloudflare. We do not store IP addresses.</p>
           </section>
           <div class="hover-preview" id="hoverPreview" hidden></div>
         </div>
@@ -277,6 +277,6 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
       window.__PAID_SQUARES__ = <?= $squaresJson ?>;
     </script>
     <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js" defer></script>
-    <script src="/assets/app.js?v=20260821-directory" defer></script>
+    <script src="/assets/app.js?v=20260821-locations" defer></script>
   </body>
 </html>

@@ -26,7 +26,9 @@ npx wrangler secret put STRIPE_WEBHOOK_SECRET
 
 Checkout uses Stripe product `prod_Uam47pbENlHbmX` and creates a one-time price from the buyer's chosen cumulative bid. The bid must beat the highest active bid by at least $1 and cannot exceed $10,000. Returning buyers enter the exact same destination URL; their previous bid is credited and Stripe charges only the difference. Each newly paid dollar adds one day of featured time, and the highest active cumulative bid ranks #1.
 
-The premium directory supports list, card-grid, and world-map modes from the same page shell. The map uses MapLibre GL JS with OpenFreeMap tiles. New Worker checkouts round Cloudflare purchase coordinates to two decimals and store only city, country, latitude, and longitude through Stripe metadata; IP addresses are not stored. Legacy purchases remain unmapped unless location data is added later.
+The premium directory supports list, card-grid, and world-map modes from the same page shell. The map uses MapLibre GL JS with OpenFreeMap tiles. New Worker checkouts round Cloudflare purchase coordinates to two decimals and store only city, country, latitude, and longitude through Stripe metadata; IP addresses are not stored.
+
+The five listings that predate location capture are backfilled with approximate public headquarters or regional coordinates and labelled `estimated_headquarters`; new locations are labelled `checkout`.
 
 Deploy:
 

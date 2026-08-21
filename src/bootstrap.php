@@ -87,6 +87,7 @@ function db(): PDO
             purchase_country TEXT,
             purchase_latitude REAL,
             purchase_longitude REAL,
+            location_source TEXT,
             status TEXT NOT NULL DEFAULT "pending",
             created_at TEXT NOT NULL,
             paid_at TEXT
@@ -124,6 +125,7 @@ function ensure_square_columns(PDO $pdo): void
         'purchase_country' => 'TEXT',
         'purchase_latitude' => 'REAL',
         'purchase_longitude' => 'REAL',
+        'location_source' => 'TEXT',
     ];
 
     foreach ($definitions as $name => $definition) {
@@ -196,7 +198,7 @@ function seo_head(string $title, string $description, ?string $path = '/', strin
         . '<link rel="icon" href="/favicon.svg" type="image/svg+xml">' . PHP_EOL
         . '<link rel="apple-touch-icon" href="/apple-touch-icon.png">' . PHP_EOL
         . '<link rel="manifest" href="/site.webmanifest">' . PHP_EOL
-        . '<link rel="stylesheet" href="/assets/app.css?v=20260821-directory">' . PHP_EOL
+        . '<link rel="stylesheet" href="/assets/app.css?v=20260821-locations">' . PHP_EOL
         . datafast_analytics_script();
 }
 
@@ -210,7 +212,7 @@ function render(string $view, array $data = []): never
 function paid_squares(): array
 {
     $stmt = db()->query(
-        'SELECT square_id, label, url, category, click_count, verified_company, territory_key, territory_size, featured_from, featured_until, featured_amount_cents, purchase_city, purchase_country, purchase_latitude, purchase_longitude, paid_at
+        'SELECT square_id, label, url, category, click_count, verified_company, territory_key, territory_size, featured_from, featured_until, featured_amount_cents, purchase_city, purchase_country, purchase_latitude, purchase_longitude, location_source, paid_at
             FROM squares
             WHERE status = "paid"
             ORDER BY square_id ASC'
@@ -589,7 +591,7 @@ function mark_squares_paid(array $squareIds, string $checkoutSessionId, ?string 
         }
 
         if ($purchaseLocation !== null && $squareIds !== []) {
-            $location = $db->prepare('UPDATE squares SET purchase_city = COALESCE(purchase_city, :city), purchase_country = COALESCE(purchase_country, :country), purchase_latitude = COALESCE(purchase_latitude, :latitude), purchase_longitude = COALESCE(purchase_longitude, :longitude) WHERE square_id = :square_id');
+            $location = $db->prepare('UPDATE squares SET purchase_city = COALESCE(purchase_city, :city), purchase_country = COALESCE(purchase_country, :country), purchase_latitude = COALESCE(purchase_latitude, :latitude), purchase_longitude = COALESCE(purchase_longitude, :longitude), location_source = COALESCE(location_source, "checkout") WHERE square_id = :square_id');
             $location->execute([
                 'city' => $purchaseLocation['city'],
                 'country' => $purchaseLocation['country'],
