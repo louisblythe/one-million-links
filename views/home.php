@@ -87,8 +87,8 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
           <div id="directoryList" class="directory-list" aria-label="Claimed link directory" hidden>
             <div class="directory-list__header">
               <div>
-                <p class="eyebrow">Public directory</p>
-                <h2>Links people are visiting</h2>
+                <p class="eyebrow">Claimed links</p>
+                <h2>Link leaderboard</h2>
               </div>
               <p id="directoryCount" class="directory-list__count"></p>
             </div>
@@ -248,6 +248,6 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
     <script>
       window.__PAID_SQUARES__ = <?= $squaresJson ?>;
     </script>
-    <script src="/assets/app.js?v=20260821-directory" defer></script>
+    <script src="/assets/app.js?v=20260821-list-layout" defer></script>
   </body>
 </html>

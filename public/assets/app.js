@@ -665,6 +665,7 @@ function setActiveView(view) {
   gridViewButton.classList.toggle("is-active", !isList);
   listViewButton.setAttribute("aria-pressed", String(isList));
   gridViewButton.setAttribute("aria-pressed", String(!isList));
+  document.body.dataset.view = activeView;
   localStorage.setItem("linkforadollar:view", activeView);
 
   if (!isList) {

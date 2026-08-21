@@ -549,6 +549,258 @@ button:hover,
   color: var(--ink);
 }
 
+body[data-view="list"] {
+  background: #eef6f3;
+}
+
+body[data-view="list"] .site-header,
+body[data-view="list"] .page-shell {
+  width: min(920px, calc(100vw - 32px));
+}
+
+body[data-view="list"] .site-header {
+  padding-top: 22px;
+}
+
+body[data-view="list"] .site-header nav {
+  display: none;
+}
+
+body[data-view="list"] .page-shell {
+  padding-top: 18px;
+}
+
+body[data-view="list"] .masthead {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  margin: 0 auto 24px;
+  padding: 30px 20px 8px;
+  text-align: center;
+}
+
+body[data-view="list"] .hero-copy {
+  justify-items: center;
+  gap: 12px;
+}
+
+body[data-view="list"] .hero-kicker {
+  max-width: 16ch;
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  line-height: 0.96;
+  text-wrap: balance;
+}
+
+body[data-view="list"] h1 {
+  font-size: clamp(2rem, 4.4vw, 3.6rem);
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+body[data-view="list"] .hero-subhead {
+  max-width: 650px;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+body[data-view="list"] .stats {
+  position: absolute;
+  top: -52px;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 9px 14px;
+  border-radius: 999px;
+}
+
+body[data-view="list"] .stats strong {
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+
+body[data-view="list"] .stats span,
+body[data-view="list"] .stats a {
+  font-size: 0.78rem;
+}
+
+body[data-view="list"] .momentum-strip {
+  display: none;
+}
+
+body[data-view="list"] .workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 26px;
+}
+
+body[data-view="list"] .claim-panel {
+  position: static;
+  grid-row: 1;
+  gap: 18px;
+  max-height: none;
+  overflow: visible;
+  padding: 26px;
+  border-radius: 18px;
+  box-shadow: 0 14px 36px rgba(20, 22, 26, 0.08);
+}
+
+body[data-view="list"] .claim-copy {
+  justify-items: center;
+  text-align: center;
+}
+
+body[data-view="list"] .claim-copy h2 {
+  max-width: 620px;
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  text-wrap: balance;
+}
+
+body[data-view="list"] .claim-benefits {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 22px;
+  padding: 0;
+  list-style-position: inside;
+  font-size: 0.82rem;
+}
+
+body[data-view="list"] .claim-panel form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 0;
+}
+
+body[data-view="list"] .claim-panel form .field-row:nth-child(2),
+body[data-view="list"] .claim-panel form .field-row:nth-child(3),
+body[data-view="list"] #checkoutButton {
+  grid-column: 1 / -1;
+}
+
+body[data-view="list"] #checkoutButton {
+  position: static;
+  width: 100%;
+  box-shadow: none;
+}
+
+body[data-view="list"] .selection,
+body[data-view="list"] .claim-panel .proof-panel {
+  display: none;
+}
+
+body[data-view="list"] .canvas-panel {
+  grid-row: 2;
+  grid-template-rows: auto auto;
+  min-height: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+}
+
+body[data-view="list"] .board-toolbar {
+  grid-template-columns: minmax(240px, 1fr) 190px auto;
+  margin-bottom: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+body[data-view="list"] .view-toggle {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+body[data-view="list"] .directory-list {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}
+
+body[data-view="list"] .directory-list__header {
+  margin-bottom: 16px;
+}
+
+body[data-view="list"] .directory-list__header h2 {
+  font-size: 1.45rem;
+  text-wrap: balance;
+}
+
+body[data-view="list"] .directory-rows {
+  gap: 10px;
+}
+
+body[data-view="list"] .directory-row {
+  grid-template-columns: 44px 42px minmax(0, 1fr) 78px 84px;
+  min-height: 104px;
+  padding: 16px 18px;
+  border-radius: 16px;
+}
+
+body[data-view="list"] .directory-row:nth-child(1) {
+  border-color: #e5bd53;
+  background: #fff2c7;
+}
+
+body[data-view="list"] .directory-row:nth-child(2) {
+  background: #f2f4f7;
+}
+
+body[data-view="list"] .directory-row:nth-child(3) {
+  border-color: #d9b58c;
+  background: #f6e8d8;
+}
+
+body[data-view="list"] .directory-row__rank {
+  font-size: 1rem;
+}
+
+body[data-view="list"] .directory-row:nth-child(1) .directory-row__rank::before {
+  content: "● ";
+  color: #c8861a;
+}
+
+body[data-view="list"] .directory-row:nth-child(2) .directory-row__rank::before {
+  content: "● ";
+  color: #8f98a5;
+}
+
+body[data-view="list"] .directory-row:nth-child(3) .directory-row__rank::before {
+  content: "● ";
+  color: #a9652e;
+}
+
+body[data-view="list"] .directory-row .mini-logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+}
+
+body[data-view="list"] .directory-row__identity {
+  gap: 4px;
+}
+
+body[data-view="list"] .directory-row__identity strong {
+  font-size: 1rem;
+}
+
+body[data-view="list"] .directory-row__metric strong {
+  color: var(--accent-dark);
+  font-size: 1rem;
+}
+
+body[data-view="list"] .directory-row__visit {
+  text-align: right;
+}
+
+body[data-view="list"] .trending-section,
+body[data-view="list"] .seo-footer {
+  display: none;
+}
+
 .hover-preview {
   position: absolute;
   z-index: 10;
@@ -1406,6 +1658,46 @@ select:focus-visible {
     grid-column: 3 / -1;
     width: fit-content;
   }
+
+  body[data-view="list"] .page-shell {
+    padding-top: 16px;
+  }
+
+  body[data-view="list"] .masthead {
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  body[data-view="list"] .stats {
+    position: static;
+  }
+
+  body[data-view="list"] .claim-panel {
+    padding: 18px;
+  }
+
+  body[data-view="list"] .claim-panel form,
+  body[data-view="list"] .board-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  body[data-view="list"] .claim-panel form .field-row,
+  body[data-view="list"] #checkoutButton {
+    grid-column: 1;
+  }
+
+  body[data-view="list"] .directory-row {
+    grid-template-columns: 38px 42px minmax(0, 1fr) auto;
+    min-height: 94px;
+  }
+
+  body[data-view="list"] .directory-row__metric {
+    display: grid;
+  }
+
+  body[data-view="list"] .directory-row__visit {
+    grid-column: 3 / -1;
+  }
 }
 
 @media (max-width: 360px) {
@@ -1439,5 +1731,38 @@ select:focus-visible {
 
   .directory-row__visit {
     grid-column: 3;
+  }
+
+  body[data-view="list"] .site-header,
+  body[data-view="list"] .page-shell {
+    width: calc(100vw - 20px);
+  }
+
+  body[data-view="list"] .hero-kicker {
+    font-size: 2.35rem;
+  }
+
+  body[data-view="list"] .claim-benefits {
+    display: grid;
+    justify-content: start;
+    text-align: left;
+  }
+
+  body[data-view="list"] .directory-list__header {
+    display: grid;
+  }
+
+  body[data-view="list"] .directory-row {
+    grid-template-columns: 30px 38px minmax(0, 1fr);
+    padding: 13px 12px;
+  }
+
+  body[data-view="list"] .directory-row .mini-logo {
+    width: 38px;
+    height: 38px;
+  }
+
+  body[data-view="list"] .directory-row__metric {
+    display: none;
   }
 }
