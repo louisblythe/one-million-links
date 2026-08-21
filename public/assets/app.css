@@ -759,6 +759,7 @@ body[data-directory-mode="true"] .claim-panel form .field-row:nth-child(6) {
 
 body[data-directory-mode="true"] .claim-panel form .field-row:nth-child(2),
 body[data-directory-mode="true"] .claim-panel form .field-row:nth-child(3),
+body[data-directory-mode="true"] .claim-panel form .logo-field,
 body[data-directory-mode="true"] #checkoutButton {
   grid-column: 1 / -1;
 }
@@ -1339,6 +1340,30 @@ label {
     linear-gradient(90deg, rgba(20, 22, 26, 0.08) 1px, transparent 1px),
     linear-gradient(rgba(20, 22, 26, 0.08) 1px, transparent 1px),
     #fff;
+}
+
+.mini-logo {
+  position: relative;
+  overflow: hidden;
+}
+
+.mini-logo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 6px;
+  background: #fff;
+  object-fit: contain;
+}
+
+.map-popup-logo {
+  display: block;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  object-fit: contain;
 }
 
 .hover-preview__media,

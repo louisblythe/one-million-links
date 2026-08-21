@@ -141,6 +141,10 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
               <label for="url">Link destination</label>
               <input id="url" name="url" type="url" placeholder="https://example.com" required>
             </div>
+            <div class="field-row logo-field">
+              <label for="logo_url">Logo URL <span>(optional)</span></label>
+              <input id="logo_url" name="logo_url" type="url" maxlength="500" placeholder="Auto-detected from your website">
+            </div>
             <div class="field-row">
               <label for="category">Category</label>
               <select id="category" name="category">
@@ -277,6 +281,6 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
       window.__PAID_SQUARES__ = <?= $squaresJson ?>;
     </script>
     <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js" defer></script>
-    <script src="/assets/app.js?v=20260821-locations" defer></script>
+    <script src="/assets/app.js?v=20260821-branding" defer></script>
   </body>
 </html>

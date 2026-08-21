@@ -88,6 +88,7 @@ function db(): PDO
             purchase_latitude REAL,
             purchase_longitude REAL,
             location_source TEXT,
+            logo_url TEXT,
             status TEXT NOT NULL DEFAULT "pending",
             created_at TEXT NOT NULL,
             paid_at TEXT
@@ -126,6 +127,7 @@ function ensure_square_columns(PDO $pdo): void
         'purchase_latitude' => 'REAL',
         'purchase_longitude' => 'REAL',
         'location_source' => 'TEXT',
+        'logo_url' => 'TEXT',
     ];
 
     foreach ($definitions as $name => $definition) {
@@ -198,7 +200,7 @@ function seo_head(string $title, string $description, ?string $path = '/', strin
         . '<link rel="icon" href="/favicon.svg" type="image/svg+xml">' . PHP_EOL
         . '<link rel="apple-touch-icon" href="/apple-touch-icon.png">' . PHP_EOL
         . '<link rel="manifest" href="/site.webmanifest">' . PHP_EOL
-        . '<link rel="stylesheet" href="/assets/app.css?v=20260821-locations">' . PHP_EOL
+        . '<link rel="stylesheet" href="/assets/app.css?v=20260821-branding">' . PHP_EOL
         . datafast_analytics_script();
 }
 
@@ -212,7 +214,7 @@ function render(string $view, array $data = []): never
 function paid_squares(): array
 {
     $stmt = db()->query(
-        'SELECT square_id, label, url, category, click_count, verified_company, territory_key, territory_size, featured_from, featured_until, featured_amount_cents, purchase_city, purchase_country, purchase_latitude, purchase_longitude, location_source, paid_at
+        'SELECT square_id, label, url, category, click_count, verified_company, territory_key, territory_size, featured_from, featured_until, featured_amount_cents, purchase_city, purchase_country, purchase_latitude, purchase_longitude, location_source, logo_url, paid_at
             FROM squares
             WHERE status = "paid"
             ORDER BY square_id ASC'
@@ -491,7 +493,7 @@ function rebid_context(string $url): array
     return ['square_ids' => $squareIds, 'previous_cents' => (int) ($primary['featured_amount_cents'] ?? 0), 'highest_cents' => $highest];
 }
 
-function reserve_squares(int $squareId, int $packSize, string $label, string $url, string $category, ?string $email): array
+function reserve_squares(int $squareId, int $packSize, string $label, string $url, string $category, ?string $email, ?string $logoUrl = null): array
 {
     $ids = adjacent_square_ids($squareId, $packSize);
     $db = db();
@@ -508,8 +510,8 @@ function reserve_squares(int $squareId, int $packSize, string $label, string $ur
     $verified = company_is_verified($url, $email) ? 1 : 0;
     $ownerHost = host_from_url($url);
     $stmt = $db->prepare(
-        'INSERT INTO squares (square_id, label, url, owner_host, category, owner_email, verified_company, territory_key, territory_size, status, created_at)
-            VALUES (:square_id, :label, :url, :owner_host, :category, :owner_email, :verified_company, :territory_key, :territory_size, "pending", :created_at)
+        'INSERT INTO squares (square_id, label, url, owner_host, category, owner_email, verified_company, territory_key, territory_size, logo_url, status, created_at)
+            VALUES (:square_id, :label, :url, :owner_host, :category, :owner_email, :verified_company, :territory_key, :territory_size, :logo_url, "pending", :created_at)
         ON CONFLICT(square_id) DO UPDATE SET
             label = excluded.label,
             url = excluded.url,
@@ -519,6 +521,7 @@ function reserve_squares(int $squareId, int $packSize, string $label, string $ur
             verified_company = excluded.verified_company,
             territory_key = excluded.territory_key,
             territory_size = excluded.territory_size,
+            logo_url = excluded.logo_url,
             status = "pending",
             created_at = excluded.created_at'
     );
@@ -535,6 +538,7 @@ function reserve_squares(int $squareId, int $packSize, string $label, string $ur
             'verified_company' => $verified,
             'territory_key' => $territoryKey,
             'territory_size' => count($ids),
+            'logo_url' => $logoUrl,
             'created_at' => $createdAt,
         ]);
     }
@@ -564,7 +568,13 @@ function stripe_purchase_location(object $session): ?array
     ];
 }
 
-function mark_squares_paid(array $squareIds, string $checkoutSessionId, ?string $paymentIntentId, int $featuredDays = 0, int $totalBidCents = 0, ?array $purchaseLocation = null): void
+function stripe_logo_url(object $session): ?string
+{
+    $value = trim((string) ($session->metadata->logo_url ?? ''));
+    return $value !== '' && filter_var($value, FILTER_VALIDATE_URL) ? substr($value, 0, 500) : null;
+}
+
+function mark_squares_paid(array $squareIds, string $checkoutSessionId, ?string $paymentIntentId, int $featuredDays = 0, int $totalBidCents = 0, ?array $purchaseLocation = null, ?string $logoUrl = null): void
 {
     $db = db();
     $stmt = $db->prepare(
@@ -588,6 +598,11 @@ function mark_squares_paid(array $squareIds, string $checkoutSessionId, ?string 
                 'payment_intent_id' => $paymentIntentId,
                 'paid_at' => $paidAt,
             ]);
+        }
+
+        if ($logoUrl !== null && $squareIds !== []) {
+            $logo = $db->prepare('UPDATE squares SET logo_url = :logo_url WHERE square_id = :square_id');
+            $logo->execute(['logo_url' => $logoUrl, 'square_id' => validate_square_id((int) $squareIds[0])]);
         }
 
         if ($purchaseLocation !== null && $squareIds !== []) {

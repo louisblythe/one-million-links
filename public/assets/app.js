@@ -74,6 +74,7 @@ const allSquares = rawSquares.map((square) => {
     purchaseLatitude: square.purchase_latitude == null ? Number.NaN : Number(square.purchase_latitude),
     purchaseLongitude: square.purchase_longitude == null ? Number.NaN : Number(square.purchase_longitude),
     locationSource: square.location_source || "checkout",
+    logoUrl: square.logo_url || "",
     paidAt,
     color: CATEGORY_COLORS[category] || CLAIM_COLORS[Math.abs(hashString(`${square.label}-${square.url}`)) % CLAIM_COLORS.length],
   };
@@ -143,6 +144,11 @@ function formatDate(value) {
 
 function logoUrl(host) {
   return host ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64` : "";
+}
+
+function brandMark(square) {
+  const source = square.logoUrl || logoUrl(square.host);
+  return `<span class="mini-logo" style="background:${square.color}"><img src="${escapeHtml(source)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.hidden=true">${escapeHtml(initials(square.label, square.host))}</span>`;
 }
 
 function visitHref(squareId) {
@@ -743,6 +749,7 @@ function purchaseLocationGeoJson() {
         host: square.host,
         location: [square.purchaseCity, square.purchaseCountry].filter(Boolean).join(", ") || "Approximate location",
         sourceLabel: square.locationSource === "estimated_headquarters" ? "Estimated headquarters" : "Checkout location",
+        logo: square.logoUrl || logoUrl(square.host),
         color: square.color,
       },
     })),
@@ -825,7 +832,7 @@ function initializePurchaseMap() {
       const properties = feature.properties || {};
       new window.maplibregl.Popup({ offset: 12 })
         .setLngLat(feature.geometry.coordinates)
-        .setHTML(`<strong>${escapeHtml(properties.label || "Claimed link")}</strong><span>${escapeHtml(properties.location || "")}</span><span>${escapeHtml(properties.sourceLabel || "Approximate location")}</span><a href="/squares/${Number(properties.id) + 1}">View ${escapeHtml(properties.host || "link")}</a>`)
+        .setHTML(`<img class="map-popup-logo" src="${escapeHtml(properties.logo || "")}" alt="" referrerpolicy="no-referrer" onerror="this.hidden=true"><strong>${escapeHtml(properties.label || "Claimed link")}</strong><span>${escapeHtml(properties.location || "")}</span><span>${escapeHtml(properties.sourceLabel || "Approximate location")}</span><a href="/squares/${Number(properties.id) + 1}">View ${escapeHtml(properties.host || "link")}</a>`)
         .addTo(purchaseMap);
     });
     purchaseMap.on("click", "purchase-clusters", async (event) => {
@@ -861,7 +868,7 @@ function renderDirectory() {
   directoryRows.innerHTML = ranked.length ? ranked.map((square, index) => `
     <li class="directory-row${featureState(square, now) === "active" ? " is-featured" : ""}">
       <span class="directory-row__rank" aria-label="Rank ${index + 1}">#${index + 1}</span>
-      <span class="mini-logo" style="background:${square.color}">${escapeHtml(initials(square.label, square.host))}</span>
+      ${brandMark(square)}
       <span class="directory-row__identity">
         <strong><a href="/squares/${square.id + 1}">${escapeHtml(square.label)}</a></strong>
         <span>${escapeHtml(square.host || square.url)}</span>
@@ -897,7 +904,7 @@ function renderSearchResults(query) {
 
   searchResults.innerHTML = matches.map((square) => `
     <a class="search-result" href="/squares/${square.id + 1}">
-      <span class="mini-logo" style="background:${square.color}">${escapeHtml(initials(square.label, square.host))}</span>
+      ${brandMark(square)}
       <span>
         <strong>${escapeHtml(square.label)}</strong>
         <span>${escapeHtml(square.host)} · ${escapeHtml(square.category)}</span>
@@ -969,7 +976,7 @@ function renderSquareList(id, squares, label, metric = (square) => `#${square.id
 
   target.innerHTML = squares.length ? squares.map((square, index) => `
     <li>
-      <span class="mini-logo" style="background:${square.color}">${escapeHtml(initials(square.label, square.host))}</span>
+      ${brandMark(square)}
       <div>
         <strong>${escapeHtml(square.label)}</strong>
         <span>${escapeHtml(square.category)} · ${escapeHtml(square.host)}</span>
@@ -984,7 +991,7 @@ function renderTrending(squares) {
 
   target.innerHTML = squares.length ? squares.map((square) => `
     <a class="trending-card" href="/squares/${square.id + 1}">
-      <span class="mini-logo" style="background:${square.color}">${escapeHtml(initials(square.label, square.host))}</span>
+      ${brandMark(square)}
       <span>
         <strong>${escapeHtml(square.label)}</strong>
         <span>${escapeHtml(square.category)} · ${escapeHtml(square.host)}</span>
