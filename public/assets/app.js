@@ -81,7 +81,10 @@ let originX = 0;
 let originY = 0;
 let isPanning = false;
 let panStart = null;
-let activeView = localStorage.getItem("linkforadollar:view") === "list" ? "list" : "grid";
+const requestedView = new URLSearchParams(window.location.search).get("view");
+let activeView = requestedView === "list" || requestedView === "grid"
+  ? requestedView
+  : localStorage.getItem("linkforadollar:view") === "list" ? "list" : "grid";
 
 function hashString(value) {
   let hash = 0;

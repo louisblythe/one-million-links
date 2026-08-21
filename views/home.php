@@ -21,9 +21,10 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
   <body>
     <main class="page-shell">
       <section class="masthead">
+        <a class="list-brand" href="/">Link for a Dollar</a>
         <div class="hero-copy">
-          <p class="hero-kicker">Own a pixel of the internet</p>
-          <h1>Link for a Dollar</h1>
+          <p class="hero-kicker">Permanent. Public. Yours.</p>
+          <h1>Own a piece of the internet</h1>
           <p class="hero-subhead">1,000,000 permanent public spots. Claim yours, share the card, and give people another way to discover your site.</p>
         </div>
         <div class="stats">
@@ -99,8 +100,8 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
 
         <aside class="claim-panel">
           <div class="claim-copy">
-            <p class="eyebrow">Public claim</p>
-            <h2>Own permanent discovery real estate</h2>
+            <p class="eyebrow">Featured placement</p>
+            <h2>Claim the #1 spot for as long as you choose</h2>
             <ul class="claim-benefits">
               <li>Add your brand to the wall</li>
               <li>Get a shareable claim page</li>
@@ -145,7 +146,7 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
               </select>
             </div>
             <div class="field-row payment-level-field">
-              <label for="payment_level">Payment level</label>
+              <label for="payment_level">Choose your #1 run</label>
               <div class="money-input">
                 <span aria-hidden="true">$</span>
                 <input id="payment_level" name="payment_level" type="number" min="1" max="365" step="1" value="1" required aria-describedby="placementPreview">
@@ -256,6 +257,6 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
     <script>
       window.__PAID_SQUARES__ = <?= $squaresJson ?>;
     </script>
-    <script src="/assets/app.js?v=20260821-featured" defer></script>
+    <script src="/assets/app.js?v=20260821-premium" defer></script>
   </body>
 </html>
