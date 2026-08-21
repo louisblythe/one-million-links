@@ -83,6 +83,10 @@ function db(): PDO
             featured_from TEXT,
             featured_until TEXT,
             featured_amount_cents INTEGER,
+            purchase_city TEXT,
+            purchase_country TEXT,
+            purchase_latitude REAL,
+            purchase_longitude REAL,
             status TEXT NOT NULL DEFAULT "pending",
             created_at TEXT NOT NULL,
             paid_at TEXT
@@ -94,6 +98,7 @@ function db(): PDO
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_squares_owner_host ON squares(owner_host)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_squares_featured_until ON squares(featured_until)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_squares_featured_amount ON squares(featured_amount_cents)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_squares_purchase_country ON squares(purchase_country)');
 
     return $pdo;
 }
@@ -115,6 +120,10 @@ function ensure_square_columns(PDO $pdo): void
         'featured_from' => 'TEXT',
         'featured_until' => 'TEXT',
         'featured_amount_cents' => 'INTEGER',
+        'purchase_city' => 'TEXT',
+        'purchase_country' => 'TEXT',
+        'purchase_latitude' => 'REAL',
+        'purchase_longitude' => 'REAL',
     ];
 
     foreach ($definitions as $name => $definition) {
@@ -187,7 +196,7 @@ function seo_head(string $title, string $description, ?string $path = '/', strin
         . '<link rel="icon" href="/favicon.svg" type="image/svg+xml">' . PHP_EOL
         . '<link rel="apple-touch-icon" href="/apple-touch-icon.png">' . PHP_EOL
         . '<link rel="manifest" href="/site.webmanifest">' . PHP_EOL
-        . '<link rel="stylesheet" href="/assets/app.css?v=20260821-rebid">' . PHP_EOL
+        . '<link rel="stylesheet" href="/assets/app.css?v=20260821-directory">' . PHP_EOL
         . datafast_analytics_script();
 }
 
@@ -201,7 +210,7 @@ function render(string $view, array $data = []): never
 function paid_squares(): array
 {
     $stmt = db()->query(
-        'SELECT square_id, label, url, category, click_count, verified_company, territory_key, territory_size, featured_from, featured_until, featured_amount_cents, paid_at
+        'SELECT square_id, label, url, category, click_count, verified_company, territory_key, territory_size, featured_from, featured_until, featured_amount_cents, purchase_city, purchase_country, purchase_latitude, purchase_longitude, paid_at
             FROM squares
             WHERE status = "paid"
             ORDER BY square_id ASC'
@@ -536,7 +545,24 @@ function reserve_square(int $squareId, string $label, string $url, string $categ
     reserve_squares($squareId, 1, $label, $url, $category, $email);
 }
 
-function mark_squares_paid(array $squareIds, string $checkoutSessionId, ?string $paymentIntentId, int $featuredDays = 0, int $totalBidCents = 0): void
+function stripe_purchase_location(object $session): ?array
+{
+    $latitude = filter_var($session->metadata->purchase_latitude ?? null, FILTER_VALIDATE_FLOAT);
+    $longitude = filter_var($session->metadata->purchase_longitude ?? null, FILTER_VALIDATE_FLOAT);
+
+    if ($latitude === false || $longitude === false || $latitude < -90 || $latitude > 90 || $longitude < -180 || $longitude > 180) {
+        return null;
+    }
+
+    return [
+        'city' => substr((string) ($session->metadata->purchase_city ?? ''), 0, 80),
+        'country' => substr(strtoupper((string) ($session->metadata->purchase_country ?? '')), 0, 2),
+        'latitude' => $latitude,
+        'longitude' => $longitude,
+    ];
+}
+
+function mark_squares_paid(array $squareIds, string $checkoutSessionId, ?string $paymentIntentId, int $featuredDays = 0, int $totalBidCents = 0, ?array $purchaseLocation = null): void
 {
     $db = db();
     $stmt = $db->prepare(
@@ -559,6 +585,17 @@ function mark_squares_paid(array $squareIds, string $checkoutSessionId, ?string 
                 'checkout_session_id' => $storedCheckoutSessionId,
                 'payment_intent_id' => $paymentIntentId,
                 'paid_at' => $paidAt,
+            ]);
+        }
+
+        if ($purchaseLocation !== null && $squareIds !== []) {
+            $location = $db->prepare('UPDATE squares SET purchase_city = COALESCE(purchase_city, :city), purchase_country = COALESCE(purchase_country, :country), purchase_latitude = COALESCE(purchase_latitude, :latitude), purchase_longitude = COALESCE(purchase_longitude, :longitude) WHERE square_id = :square_id');
+            $location->execute([
+                'city' => $purchaseLocation['city'],
+                'country' => $purchaseLocation['country'],
+                'latitude' => $purchaseLocation['latitude'],
+                'longitude' => $purchaseLocation['longitude'],
+                'square_id' => validate_square_id((int) $squareIds[0]),
             ]);
         }
 

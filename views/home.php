@@ -8,6 +8,7 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <?= seo_head('Link for a Dollar | Public Discovery Board', 'Claim a permanent public profile and sponsored link on a million-square discovery board for one dollar.', '/') ?>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
     <script type="application/ld+json">
       <?= json_encode([
           '@context' => 'https://schema.org',
@@ -18,7 +19,7 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
       ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>
     </script>
   </head>
-  <body>
+  <body data-directory-mode="true">
     <main class="page-shell">
       <section class="masthead">
         <a class="list-brand" href="/">Link for a Dollar</a>
@@ -74,8 +75,9 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
               <option value="Other">Other</option>
             </select>
             <div class="view-toggle" role="group" aria-label="Choose board view">
-              <button class="view-toggle__button" id="listViewButton" type="button" aria-pressed="false" aria-controls="directoryList">List</button>
-              <button class="view-toggle__button is-active" id="gridViewButton" type="button" aria-pressed="true" aria-controls="grid">Grid</button>
+              <button class="view-toggle__button is-active" id="listViewButton" type="button" aria-pressed="true" aria-controls="directoryList">List</button>
+              <button class="view-toggle__button" id="gridViewButton" type="button" aria-pressed="false" aria-controls="directoryList">Grid</button>
+              <button class="view-toggle__button" id="mapViewButton" type="button" aria-pressed="false" aria-controls="purchaseMap">Map</button>
             </div>
             <div class="zoom-controls" aria-label="Zoom controls">
               <button class="tool-button" id="zoomOut" type="button" aria-label="Zoom out">-</button>
@@ -95,6 +97,22 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
             </div>
             <ol id="directoryRows" class="directory-rows"></ol>
           </div>
+          <section id="purchaseMapPanel" class="purchase-map-panel" aria-labelledby="purchase-map-title" hidden>
+            <div class="directory-list__header">
+              <div>
+                <p class="eyebrow">Purchase locations</p>
+                <h2 id="purchase-map-title">Links claimed around the world</h2>
+              </div>
+              <p id="mapLocationCount" class="directory-list__count"></p>
+            </div>
+            <div id="purchaseMap" class="purchase-map" aria-label="World map of coarse purchase locations"></div>
+            <div id="mapEmptyState" class="map-empty-state" hidden>
+              <strong>The map is ready for its first location</strong>
+              <span>New purchases appear here using coarse city-level location. We do not store IP addresses.</span>
+              <button type="button" data-focus-claim>Claim the first mapped link</button>
+            </div>
+            <p class="map-privacy-note">Locations are approximate and captured at checkout from Cloudflare city-level geolocation. We do not store IP addresses.</p>
+          </section>
           <div class="hover-preview" id="hoverPreview" hidden></div>
         </div>
 
@@ -258,6 +276,7 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
     <script>
       window.__PAID_SQUARES__ = <?= $squaresJson ?>;
     </script>
-    <script src="/assets/app.js?v=20260821-rebid" defer></script>
+    <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js" defer></script>
+    <script src="/assets/app.js?v=20260821-directory" defer></script>
   </body>
 </html>

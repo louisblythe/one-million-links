@@ -224,7 +224,7 @@ try {
                     : [(int) $session->client_reference_id];
                 $featuredDays = isset($session->metadata->featured_days) ? max(0, min(10000, (int) $session->metadata->featured_days)) : 0;
                 $totalBidCents = isset($session->metadata->total_bid_cents) ? max(0, (int) $session->metadata->total_bid_cents) : $featuredDays * 100;
-                mark_squares_paid($squareIds, $session->id, is_string($session->payment_intent) ? $session->payment_intent : null, $featuredDays, $totalBidCents);
+                mark_squares_paid($squareIds, $session->id, is_string($session->payment_intent) ? $session->payment_intent : null, $featuredDays, $totalBidCents, stripe_purchase_location($session));
             }
         }
 
@@ -254,7 +254,7 @@ try {
                     : [(int) $session->client_reference_id];
                 $featuredDays = isset($session->metadata->featured_days) ? max(0, min(10000, (int) $session->metadata->featured_days)) : 0;
                 $totalBidCents = isset($session->metadata->total_bid_cents) ? max(0, (int) $session->metadata->total_bid_cents) : $featuredDays * 100;
-                mark_squares_paid($squareIds, $session->id, is_string($session->payment_intent) ? $session->payment_intent : null, $featuredDays, $totalBidCents);
+                mark_squares_paid($squareIds, $session->id, is_string($session->payment_intent) ? $session->payment_intent : null, $featuredDays, $totalBidCents, stripe_purchase_location($session));
             }
         }
 

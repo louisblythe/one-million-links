@@ -39,9 +39,13 @@ const placementPreview = document.getElementById("placementPreview");
 const checkoutButton = document.getElementById("checkoutButton");
 const gridViewButton = document.getElementById("gridViewButton");
 const listViewButton = document.getElementById("listViewButton");
+const mapViewButton = document.getElementById("mapViewButton");
 const directoryList = document.getElementById("directoryList");
 const directoryRows = document.getElementById("directoryRows");
 const directoryCount = document.getElementById("directoryCount");
+const purchaseMapPanel = document.getElementById("purchaseMapPanel");
+const mapLocationCount = document.getElementById("mapLocationCount");
+const mapEmptyState = document.getElementById("mapEmptyState");
 const zoomControls = document.querySelector(".zoom-controls");
 
 const rawSquares = window.__PAID_SQUARES__ || [];
@@ -65,6 +69,10 @@ const allSquares = rawSquares.map((square) => {
     featuredFrom: square.featured_from || "",
     featuredUntil: square.featured_until || "",
     featuredAmountCents: Number(square.featured_amount_cents || 0),
+    purchaseCity: square.purchase_city || "",
+    purchaseCountry: square.purchase_country || "",
+    purchaseLatitude: square.purchase_latitude == null ? Number.NaN : Number(square.purchase_latitude),
+    purchaseLongitude: square.purchase_longitude == null ? Number.NaN : Number(square.purchase_longitude),
     paidAt,
     color: CATEGORY_COLORS[category] || CLAIM_COLORS[Math.abs(hashString(`${square.label}-${square.url}`)) % CLAIM_COLORS.length],
   };
@@ -82,10 +90,12 @@ let originX = 0;
 let originY = 0;
 let isPanning = false;
 let panStart = null;
+let purchaseMap = null;
+let purchaseMapLoaded = false;
 const requestedView = new URLSearchParams(window.location.search).get("view");
-let activeView = requestedView === "list" || requestedView === "grid"
+let activeView = ["list", "grid", "map"].includes(requestedView)
   ? requestedView
-  : localStorage.getItem("linkforadollar:view") === "list" ? "list" : "grid";
+  : ["list", "grid", "map"].includes(localStorage.getItem("linkforadollar:view")) ? localStorage.getItem("linkforadollar:view") : "list";
 
 function hashString(value) {
   let hash = 0;
@@ -679,26 +689,160 @@ function applyFilters() {
   clusters = buildClusters(visibleSquares);
   renderSearchResults(query);
   renderDirectory();
+  updatePurchaseMap();
   updateMomentum();
   drawGrid();
 }
 
 function setActiveView(view) {
-  activeView = view === "list" ? "list" : "grid";
+  activeView = ["list", "grid", "map"].includes(view) ? view : "list";
   const isList = activeView === "list";
+  const isGrid = activeView === "grid";
+  const isMap = activeView === "map";
 
-  canvas.hidden = isList;
-  directoryList.hidden = !isList;
-  zoomControls.hidden = isList;
+  canvas.hidden = true;
+  directoryList.hidden = isMap;
+  purchaseMapPanel.hidden = !isMap;
+  zoomControls.hidden = true;
+  directoryRows.classList.toggle("is-grid", isGrid);
   listViewButton.classList.toggle("is-active", isList);
-  gridViewButton.classList.toggle("is-active", !isList);
+  gridViewButton.classList.toggle("is-active", isGrid);
+  mapViewButton.classList.toggle("is-active", isMap);
   listViewButton.setAttribute("aria-pressed", String(isList));
-  gridViewButton.setAttribute("aria-pressed", String(!isList));
+  gridViewButton.setAttribute("aria-pressed", String(isGrid));
+  mapViewButton.setAttribute("aria-pressed", String(isMap));
   document.body.dataset.view = activeView;
+  document.body.dataset.directoryMode = "true";
   localStorage.setItem("linkforadollar:view", activeView);
 
-  if (!isList) {
-    requestAnimationFrame(resizeCanvas);
+  if (isMap) {
+    initializePurchaseMap();
+    requestAnimationFrame(() => purchaseMap?.resize());
+  }
+}
+
+function purchaseLocations() {
+  return visibleSquares.filter((square) => Number.isFinite(square.purchaseLatitude)
+    && Number.isFinite(square.purchaseLongitude)
+    && square.purchaseLatitude >= -90
+    && square.purchaseLatitude <= 90
+    && square.purchaseLongitude >= -180
+    && square.purchaseLongitude <= 180);
+}
+
+function purchaseLocationGeoJson() {
+  return {
+    type: "FeatureCollection",
+    features: purchaseLocations().map((square) => ({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [square.purchaseLongitude, square.purchaseLatitude] },
+      properties: {
+        id: square.id,
+        label: square.label,
+        host: square.host,
+        location: [square.purchaseCity, square.purchaseCountry].filter(Boolean).join(", ") || "Approximate location",
+        color: square.color,
+      },
+    })),
+  };
+}
+
+function fitPurchaseMapToLocations() {
+  if (!purchaseMapLoaded || !purchaseMap) return;
+  const locations = purchaseLocations();
+  if (locations.length === 0) {
+    purchaseMap.jumpTo({ center: [10, 20], zoom: 1.15 });
+    return;
+  }
+  if (locations.length === 1) {
+    purchaseMap.jumpTo({
+      center: [locations[0].purchaseLongitude, locations[0].purchaseLatitude],
+      zoom: window.matchMedia("(max-width: 640px)").matches ? 2.5 : 3,
+    });
+    return;
+  }
+
+  const bounds = new window.maplibregl.LngLatBounds();
+  locations.forEach((location) => bounds.extend([location.purchaseLongitude, location.purchaseLatitude]));
+  purchaseMap.fitBounds(bounds, { padding: 64, maxZoom: 4, duration: 0 });
+}
+
+function initializePurchaseMap() {
+  const locations = purchaseLocations();
+  mapLocationCount.textContent = `${locations.length} mapped purchase${locations.length === 1 ? "" : "s"}`;
+  mapEmptyState.hidden = locations.length > 0;
+
+  if (purchaseMap || !window.maplibregl) {
+    if (!window.maplibregl) {
+      mapEmptyState.hidden = false;
+      mapEmptyState.querySelector("strong").textContent = "The world map could not load";
+      mapEmptyState.querySelector("span").textContent = "The directory still works in List and Grid modes. Try Map again when your connection is restored.";
+    }
+    return;
+  }
+
+  purchaseMap = new window.maplibregl.Map({
+    container: "purchaseMap",
+    style: "https://tiles.openfreemap.org/styles/liberty",
+    center: [10, 20],
+    zoom: 1.15,
+    minZoom: 1,
+    maplibreLogo: true,
+    attributionControl: false,
+  });
+  purchaseMap.addControl(new window.maplibregl.NavigationControl({ showCompass: false }), "top-right");
+  purchaseMap.addControl(new window.maplibregl.AttributionControl({ compact: true }), "bottom-right");
+  purchaseMap.on("load", () => {
+    purchaseMapLoaded = true;
+    purchaseMap.addSource("purchases", { type: "geojson", data: purchaseLocationGeoJson(), cluster: true, clusterRadius: 42, clusterMaxZoom: 6 });
+    purchaseMap.addLayer({
+      id: "purchase-clusters",
+      type: "circle",
+      source: "purchases",
+      filter: ["has", "point_count"],
+      paint: { "circle-color": "#177e6d", "circle-radius": ["step", ["get", "point_count"], 18, 10, 24, 50, 31], "circle-stroke-color": "#ffffff", "circle-stroke-width": 2 },
+    });
+    purchaseMap.addLayer({
+      id: "purchase-cluster-count",
+      type: "symbol",
+      source: "purchases",
+      filter: ["has", "point_count"],
+      layout: { "text-field": ["get", "point_count_abbreviated"], "text-size": 12 },
+      paint: { "text-color": "#ffffff" },
+    });
+    purchaseMap.addLayer({
+      id: "purchase-points",
+      type: "circle",
+      source: "purchases",
+      filter: ["!", ["has", "point_count"]],
+      paint: { "circle-color": ["get", "color"], "circle-radius": 8, "circle-stroke-color": "#ffffff", "circle-stroke-width": 2 },
+    });
+    purchaseMap.on("click", "purchase-points", (event) => {
+      const feature = event.features?.[0];
+      if (!feature) return;
+      const properties = feature.properties || {};
+      new window.maplibregl.Popup({ offset: 12 })
+        .setLngLat(feature.geometry.coordinates)
+        .setHTML(`<strong>${escapeHtml(properties.label || "Claimed link")}</strong><span>${escapeHtml(properties.location || "")}</span><a href="/squares/${Number(properties.id) + 1}">View ${escapeHtml(properties.host || "link")}</a>`)
+        .addTo(purchaseMap);
+    });
+    purchaseMap.on("click", "purchase-clusters", async (event) => {
+      const feature = event.features?.[0];
+      if (!feature) return;
+      const zoomLevel = await purchaseMap.getSource("purchases").getClusterExpansionZoom(feature.properties.cluster_id);
+      purchaseMap.jumpTo({ center: feature.geometry.coordinates, zoom: zoomLevel });
+    });
+    fitPurchaseMapToLocations();
+  });
+}
+
+function updatePurchaseMap() {
+  const locations = purchaseLocations();
+  if (mapLocationCount) mapLocationCount.textContent = `${locations.length} mapped purchase${locations.length === 1 ? "" : "s"}`;
+  if (mapEmptyState) mapEmptyState.hidden = locations.length > 0;
+  if (purchaseMapLoaded) {
+    purchaseMap.getSource("purchases")?.setData(purchaseLocationGeoJson());
+    if (activeView === "map") fitPurchaseMapToLocations();
   }
 }
 
@@ -1004,6 +1148,11 @@ categoryFilter.addEventListener("change", () => {
 });
 listViewButton.addEventListener("click", () => setActiveView("list"));
 gridViewButton.addEventListener("click", () => setActiveView("grid"));
+mapViewButton.addEventListener("click", () => setActiveView("map"));
+document.querySelector("[data-focus-claim]")?.addEventListener("click", () => {
+  document.querySelector(".claim-panel")?.scrollIntoView({ block: "start" });
+  document.getElementById("label")?.focus({ preventScroll: true });
+});
 window.addEventListener("resize", resizeCanvas);
 
 zoomRange.value = String(zoom);
