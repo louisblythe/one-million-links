@@ -1,6 +1,6 @@
 # Link for a Dollar
 
-A PHP version of the one-million-grid concept for `linkforadollar.com`. The home page shows 1,000,000 selectable squares. Each square costs $1 and is claimed through Stripe Checkout.
+A PHP version of the one-million-grid concept for `linkforadollar.com`. The home page shows 1,000,000 selectable squares. Claims use Stripe Checkout, with a minimum of $1 per square.
 
 ## Setup
 
@@ -24,7 +24,7 @@ npx wrangler secret put STRIPE_SECRET_KEY
 npx wrangler secret put STRIPE_WEBHOOK_SECRET
 ```
 
-Checkout uses Stripe product `prod_Uam47pbENlHbmX` and creates a $1 one-time price for the selected square.
+Checkout uses Stripe product `prod_Uam47pbENlHbmX` and creates a one-time price at the buyer's chosen whole-dollar payment level. The minimum is the selected territory price, the maximum is $365, and each dollar guarantees one full queued day in the #1 leaderboard position. Featured periods are assigned after confirmed payment and never displace an existing paid period.
 
 Deploy:
 

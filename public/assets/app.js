@@ -33,6 +33,8 @@ const companySearch = document.getElementById("companySearch");
 const searchResults = document.getElementById("searchResults");
 const categoryFilter = document.getElementById("categoryFilter");
 const packSizeInput = document.getElementById("pack_size");
+const paymentLevelInput = document.getElementById("payment_level");
+const placementPreview = document.getElementById("placementPreview");
 const checkoutButton = document.getElementById("checkoutButton");
 const gridViewButton = document.getElementById("gridViewButton");
 const listViewButton = document.getElementById("listViewButton");
@@ -59,6 +61,9 @@ const allSquares = rawSquares.map((square) => {
     verified: Boolean(Number(square.verified_company || 0)),
     territoryKey: square.territory_key || "",
     territorySize: Number(square.territory_size || 1),
+    featuredFrom: square.featured_from || "",
+    featuredUntil: square.featured_until || "",
+    featuredAmountCents: Number(square.featured_amount_cents || 0),
     paidAt,
     color: CATEGORY_COLORS[category] || CLAIM_COLORS[Math.abs(hashString(`${square.label}-${square.url}`)) % CLAIM_COLORS.length],
   };
@@ -131,6 +136,26 @@ function visitHref(squareId) {
 
 function formattedClicks(clicks) {
   return new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(clicks);
+}
+
+function featureState(square, now = Date.now()) {
+  const startsAt = Date.parse(square.featuredFrom || "");
+  const endsAt = Date.parse(square.featuredUntil || "");
+
+  if (!Number.isFinite(startsAt) || !Number.isFinite(endsAt) || endsAt <= now) {
+    return "none";
+  }
+
+  return startsAt <= now ? "active" : "queued";
+}
+
+function placementTimeLabel(square, now = Date.now()) {
+  const state = featureState(square, now);
+  const target = state === "active" ? Date.parse(square.featuredUntil) : Date.parse(square.featuredFrom);
+  const hours = Math.max(1, Math.ceil((target - now) / 3_600_000));
+  const duration = hours >= 48 ? `${Math.ceil(hours / 24)} days` : `${hours} hour${hours === 1 ? "" : "s"}`;
+
+  return state === "active" ? `${duration} left at #1` : state === "queued" ? `Starts in ${duration}` : "";
 }
 
 function buildClusters(squares) {
@@ -674,11 +699,17 @@ function setActiveView(view) {
 }
 
 function renderDirectory() {
-  const ranked = [...visibleSquares].sort((left, right) => right.clickCount - left.clickCount || String(right.paidAt).localeCompare(String(left.paidAt)) || left.id - right.id);
+  const now = Date.now();
+  const ranked = [...visibleSquares].sort((left, right) => {
+    const leftActive = featureState(left, now) === "active" ? 1 : 0;
+    const rightActive = featureState(right, now) === "active" ? 1 : 0;
+
+    return rightActive - leftActive || right.clickCount - left.clickCount || String(right.paidAt).localeCompare(String(left.paidAt)) || left.id - right.id;
+  });
   directoryCount.textContent = `${ranked.length.toLocaleString()} claimed link${ranked.length === 1 ? "" : "s"}`;
 
   directoryRows.innerHTML = ranked.length ? ranked.map((square, index) => `
-    <li class="directory-row">
+    <li class="directory-row${featureState(square, now) === "active" ? " is-featured" : ""}">
       <span class="directory-row__rank" aria-label="Rank ${index + 1}">#${index + 1}</span>
       <span class="mini-logo" style="background:${square.color}">${escapeHtml(initials(square.label, square.host))}</span>
       <span class="directory-row__identity">
@@ -687,8 +718,8 @@ function renderDirectory() {
         <span>${escapeHtml(square.category)} · square #${square.id + 1}</span>
       </span>
       <span class="directory-row__metric">
-        <strong>${formattedClicks(square.clickCount)}</strong>
-        <span>click${square.clickCount === 1 ? "" : "s"}</span>
+        <strong>${featureState(square, now) === "active" ? "#1" : formattedClicks(square.clickCount)}</strong>
+        <span>${placementTimeLabel(square, now) || `click${square.clickCount === 1 ? "" : "s"}`}</span>
       </span>
       <a class="directory-row__visit" href="${escapeHtml(visitHref(square.id))}" target="_blank" rel="noopener">Visit <span aria-hidden="true">↗</span></a>
     </li>
@@ -834,7 +865,20 @@ function updateCheckoutButton() {
   }
 
   const packSize = selectedPackSize();
-  checkoutButton.textContent = `Claim ${packSize} ${packSize === 1 ? "square" : "connected squares"} for $${packSize}`;
+  const currentLevel = Math.max(packSize, Math.min(365, Number(paymentLevelInput?.value || packSize)));
+
+  if (paymentLevelInput) {
+    paymentLevelInput.min = String(packSize);
+    paymentLevelInput.value = String(currentLevel);
+  }
+  if (placementPreview) {
+    const latestBookingEnd = Math.max(0, ...allSquares.map((square) => Date.parse(square.featuredUntil || "")).filter(Number.isFinite));
+    const queueNote = latestBookingEnd > Date.now()
+      ? ` Your run starts after the current booking, around ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(latestBookingEnd))}.`
+      : " Your run starts when payment is confirmed.";
+    placementPreview.textContent = `$${currentLevel} guarantees ${currentLevel} full day${currentLevel === 1 ? "" : "s"} at #1${packSize > 1 ? ` and includes ${packSize} connected squares` : ""}.${queueNote}`;
+  }
+  checkoutButton.textContent = `Claim ${packSize} ${packSize === 1 ? "square" : "connected squares"} for $${currentLevel}`;
   renderSelectedCard(paidSquares.get(selectedId), selectedId);
   drawGrid();
 }
@@ -934,6 +978,7 @@ zoomIn.addEventListener("click", () => setZoom(zoom + 1));
 zoomHome.addEventListener("click", fitToOccupied);
 squareInput.addEventListener("input", () => selectSquare(Number(squareInput.value || 1) - 1, true));
 packSizeInput?.addEventListener("change", updateCheckoutButton);
+paymentLevelInput?.addEventListener("input", updateCheckoutButton);
 companySearch.addEventListener("input", applyFilters);
 categoryFilter.addEventListener("change", () => {
   applyFilters();

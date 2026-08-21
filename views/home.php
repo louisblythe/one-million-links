@@ -104,7 +104,7 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
             <ul class="claim-benefits">
               <li>Add your brand to the wall</li>
               <li>Get a shareable claim page</li>
-              <li>Secure your square before it is gone</li>
+              <li>$1 guarantees one full day at #1</li>
             </ul>
           </div>
 
@@ -143,6 +143,14 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
                 <option value="10">10 connected squares - $10</option>
                 <option value="25">5x5 territory - $25</option>
               </select>
+            </div>
+            <div class="field-row payment-level-field">
+              <label for="payment_level">Payment level</label>
+              <div class="money-input">
+                <span aria-hidden="true">$</span>
+                <input id="payment_level" name="payment_level" type="number" min="1" max="365" step="1" value="1" required aria-describedby="placementPreview">
+              </div>
+              <small id="placementPreview">$1 keeps your link at #1 for 24 hours.</small>
             </div>
             <div class="field-row">
               <label for="email">Ownership receipt</label>
@@ -248,6 +256,6 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
     <script>
       window.__PAID_SQUARES__ = <?= $squaresJson ?>;
     </script>
-    <script src="/assets/app.js?v=20260821-list-layout" defer></script>
+    <script src="/assets/app.js?v=20260821-featured" defer></script>
   </body>
 </html>

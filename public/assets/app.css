@@ -734,13 +734,18 @@ body[data-view="list"] .directory-rows {
 }
 
 body[data-view="list"] .directory-row {
-  grid-template-columns: 44px 42px minmax(0, 1fr) 78px 84px;
+  grid-template-columns: 44px 42px minmax(0, 1fr) 140px 84px;
   min-height: 104px;
   padding: 16px 18px;
   border-radius: 16px;
 }
 
 body[data-view="list"] .directory-row:nth-child(1) {
+  border-color: #e5bd53;
+  background: #fff2c7;
+}
+
+body[data-view="list"] .directory-row.is-featured {
   border-color: #e5bd53;
   background: #fff2c7;
 }
@@ -790,6 +795,11 @@ body[data-view="list"] .directory-row__identity strong {
 body[data-view="list"] .directory-row__metric strong {
   color: var(--accent-dark);
   font-size: 1rem;
+}
+
+body[data-view="list"] .directory-row__metric span {
+  line-height: 1.25;
+  text-wrap: pretty;
 }
 
 body[data-view="list"] .directory-row__visit {
@@ -874,6 +884,41 @@ form {
 .field-row,
 .proof-group {
   gap: 7px;
+}
+
+.money-input {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.money-input:focus-within {
+  border-color: var(--accent);
+  outline: 3px solid rgba(11, 107, 203, 0.14);
+}
+
+.money-input > span {
+  padding-left: 12px;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.money-input input {
+  min-height: 40px;
+  border: 0;
+  outline: 0;
+}
+
+.payment-level-field small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 750;
+  line-height: 1.35;
+  text-wrap: pretty;
 }
 
 .claim-copy h2,

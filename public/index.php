@@ -145,6 +145,7 @@ try {
         $url = normalize_url((string) ($_POST['url'] ?? ''));
         $category = normalize_category((string) ($_POST['category'] ?? 'Other'));
         $packSize = normalize_pack_size($_POST['pack_size'] ?? 1);
+        $paymentLevel = normalize_payment_level($_POST['payment_level'] ?? $packSize, $packSize);
         $email = trim((string) ($_POST['email'] ?? ''));
         $email = filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null;
         $squareIds = reserve_squares($squareId, $packSize, $label, $url, $category, $email);
@@ -157,11 +158,12 @@ try {
             'customer_email' => $email,
             'success_url' => app_url('/success?session_id={CHECKOUT_SESSION_ID}'),
             'cancel_url' => app_url('/?square=' . ($squareId + 1) . '&cancelled=1'),
+            'integration_identifier' => 'featured_placement_' . random_letters(8),
             'line_items' => [[
-                'quantity' => count($squareIds),
+                'quantity' => 1,
                 'price_data' => [
                     'currency' => strtolower(env_value('APP_CURRENCY', 'usd') ?? 'usd'),
-                    'unit_amount' => 100,
+                    'unit_amount' => $paymentLevel * 100,
                     'product' => env_value('STRIPE_PRODUCT_ID', 'prod_Uam47pbENlHbmX'),
                 ],
             ]],
@@ -172,6 +174,8 @@ try {
                 'category' => $category,
                 'square_ids' => implode(',', $squareIds),
                 'pack_size' => (string) count($squareIds),
+                'payment_level' => (string) $paymentLevel,
+                'featured_days' => (string) $paymentLevel,
             ],
         ]);
 
@@ -208,7 +212,8 @@ try {
                 $squareIds = isset($session->metadata->square_ids)
                     ? array_map('intval', explode(',', (string) $session->metadata->square_ids))
                     : [(int) $session->client_reference_id];
-                mark_squares_paid($squareIds, $session->id, is_string($session->payment_intent) ? $session->payment_intent : null);
+                $featuredDays = isset($session->metadata->featured_days) ? max(0, min(365, (int) $session->metadata->featured_days)) : 0;
+                mark_squares_paid($squareIds, $session->id, is_string($session->payment_intent) ? $session->payment_intent : null, $featuredDays);
             }
         }
 
@@ -236,7 +241,8 @@ try {
                 $squareIds = isset($session->metadata->square_ids)
                     ? array_map('intval', explode(',', (string) $session->metadata->square_ids))
                     : [(int) $session->client_reference_id];
-                mark_squares_paid($squareIds, $session->id, is_string($session->payment_intent) ? $session->payment_intent : null);
+                $featuredDays = isset($session->metadata->featured_days) ? max(0, min(365, (int) $session->metadata->featured_days)) : 0;
+                mark_squares_paid($squareIds, $session->id, is_string($session->payment_intent) ? $session->payment_intent : null, $featuredDays);
             }
         }
 

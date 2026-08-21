@@ -8,7 +8,7 @@ require __DIR__ . '/../vendor/autoload.php';
 
 const TOTAL_SQUARES = 1000000;
 const GRID_WIDTH = 1000;
-const STRIPE_API_VERSION = '2026-02-25.clover';
+const STRIPE_API_VERSION = '2026-06-24.dahlia';
 const DATAFAST_WEBSITE_ID = 'dfid_covNyYU25Nl5a20HXqsd3';
 const DATAFAST_DOMAIN = 'linkforadollar.com';
 
@@ -80,6 +80,9 @@ function db(): PDO
             verified_company INTEGER NOT NULL DEFAULT 0,
             territory_key TEXT,
             territory_size INTEGER NOT NULL DEFAULT 1,
+            featured_from TEXT,
+            featured_until TEXT,
+            featured_amount_cents INTEGER,
             status TEXT NOT NULL DEFAULT "pending",
             created_at TEXT NOT NULL,
             paid_at TEXT
@@ -89,6 +92,7 @@ function db(): PDO
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_squares_status ON squares(status)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_squares_territory ON squares(territory_key)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_squares_owner_host ON squares(owner_host)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_squares_featured_until ON squares(featured_until)');
 
     return $pdo;
 }
@@ -107,6 +111,9 @@ function ensure_square_columns(PDO $pdo): void
         'verified_company' => 'INTEGER NOT NULL DEFAULT 0',
         'territory_key' => 'TEXT',
         'territory_size' => 'INTEGER NOT NULL DEFAULT 1',
+        'featured_from' => 'TEXT',
+        'featured_until' => 'TEXT',
+        'featured_amount_cents' => 'INTEGER',
     ];
 
     foreach ($definitions as $name => $definition) {
@@ -176,7 +183,7 @@ function seo_head(string $title, string $description, ?string $path = '/', strin
         . '<link rel="icon" href="/favicon.svg" type="image/svg+xml">' . PHP_EOL
         . '<link rel="apple-touch-icon" href="/apple-touch-icon.png">' . PHP_EOL
         . '<link rel="manifest" href="/site.webmanifest">' . PHP_EOL
-        . '<link rel="stylesheet" href="/assets/app.css?v=20260821-list-layout">' . PHP_EOL
+        . '<link rel="stylesheet" href="/assets/app.css?v=20260821-featured">' . PHP_EOL
         . datafast_analytics_script();
 }
 
@@ -190,7 +197,7 @@ function render(string $view, array $data = []): never
 function paid_squares(): array
 {
     $stmt = db()->query(
-        'SELECT square_id, label, url, category, click_count, verified_company, territory_key, territory_size, paid_at
+        'SELECT square_id, label, url, category, click_count, verified_company, territory_key, territory_size, featured_from, featured_until, featured_amount_cents, paid_at
             FROM squares
             WHERE status = "paid"
             ORDER BY square_id ASC'
@@ -388,6 +395,32 @@ function normalize_pack_size(mixed $value): int
     return in_array($size, $allowed, true) ? $size : 1;
 }
 
+function normalize_payment_level(mixed $value, int $minimum): int
+{
+    $level = filter_var($value, FILTER_VALIDATE_INT, [
+        'options' => ['min_range' => $minimum, 'max_range' => 365],
+    ]);
+
+    if ($level === false) {
+        throw new RuntimeException(sprintf('Choose a whole-dollar payment level between $%d and $365.', $minimum));
+    }
+
+    return $level;
+}
+
+function random_letters(int $length): string
+{
+    $alphabet = 'abcdefghijklmnopqrstuvwxyz';
+    $bytes = random_bytes($length);
+    $result = '';
+
+    for ($index = 0; $index < $length; $index += 1) {
+        $result .= $alphabet[ord($bytes[$index]) % strlen($alphabet)];
+    }
+
+    return $result;
+}
+
 function company_is_verified(string $url, ?string $email): bool
 {
     if (!$email) {
@@ -474,9 +507,10 @@ function reserve_square(int $squareId, string $label, string $url, string $categ
     reserve_squares($squareId, 1, $label, $url, $category, $email);
 }
 
-function mark_squares_paid(array $squareIds, string $checkoutSessionId, ?string $paymentIntentId): void
+function mark_squares_paid(array $squareIds, string $checkoutSessionId, ?string $paymentIntentId, int $featuredDays = 0): void
 {
-    $stmt = db()->prepare(
+    $db = db();
+    $stmt = $db->prepare(
         'UPDATE squares
             SET status = "paid",
                 checkout_session_id = :checkout_session_id,
@@ -486,14 +520,50 @@ function mark_squares_paid(array $squareIds, string $checkoutSessionId, ?string 
     );
     $paidAt = gmdate(DATE_ATOM);
 
-    foreach ($squareIds as $squareId) {
-        $storedCheckoutSessionId = count($squareIds) > 1 ? $checkoutSessionId . ':' . $squareId : $checkoutSessionId;
-        $stmt->execute([
-            'square_id' => validate_square_id($squareId),
-            'checkout_session_id' => $storedCheckoutSessionId,
-            'payment_intent_id' => $paymentIntentId,
-            'paid_at' => $paidAt,
-        ]);
+    $db->beginTransaction();
+
+    try {
+        foreach ($squareIds as $squareId) {
+            $storedCheckoutSessionId = count($squareIds) > 1 ? $checkoutSessionId . ':' . $squareId : $checkoutSessionId;
+            $stmt->execute([
+                'square_id' => validate_square_id($squareId),
+                'checkout_session_id' => $storedCheckoutSessionId,
+                'payment_intent_id' => $paymentIntentId,
+                'paid_at' => $paidAt,
+            ]);
+        }
+
+        if ($featuredDays > 0 && $squareIds !== []) {
+            $primaryId = validate_square_id((int) $squareIds[0]);
+            $existing = $db->prepare('SELECT featured_until FROM squares WHERE square_id = :square_id');
+            $existing->execute(['square_id' => $primaryId]);
+
+            if (!$existing->fetchColumn()) {
+                $latest = $db->prepare('SELECT MAX(featured_until) FROM squares WHERE status = "paid" AND featured_until IS NOT NULL AND square_id != :square_id');
+                $latest->execute(['square_id' => $primaryId]);
+                $latestValue = $latest->fetchColumn();
+                $now = new DateTimeImmutable($paidAt);
+                $latestDate = is_string($latestValue) && $latestValue !== '' ? new DateTimeImmutable($latestValue) : $now;
+                $startsAt = $latestDate > $now ? $latestDate : $now;
+                $endsAt = $startsAt->modify(sprintf('+%d days', $featuredDays));
+                $feature = $db->prepare(
+                    'UPDATE squares SET featured_from = :featured_from, featured_until = :featured_until, featured_amount_cents = :featured_amount_cents WHERE square_id = :square_id AND featured_until IS NULL'
+                );
+                $feature->execute([
+                    'featured_from' => $startsAt->format(DATE_ATOM),
+                    'featured_until' => $endsAt->format(DATE_ATOM),
+                    'featured_amount_cents' => $featuredDays * 100,
+                    'square_id' => $primaryId,
+                ]);
+            }
+        }
+
+        $db->commit();
+    } catch (Throwable $error) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        throw $error;
     }
 }
 
