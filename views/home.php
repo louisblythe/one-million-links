@@ -105,8 +105,9 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
             <ul class="claim-benefits">
               <li>Add your brand to the wall</li>
               <li>Get a shareable claim page</li>
-              <li>$1 guarantees one full day at #1</li>
+              <li>Previous bids are credited when you reclaim #1</li>
             </ul>
+            <p class="rebid-note"><strong>Already listed?</strong> Enter the same destination URL. We credit your previous bid, so you only pay the difference needed to beat the current leader. 🚀</p>
           </div>
 
           <form action="/checkout" method="post">
@@ -149,9 +150,9 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
               <label for="payment_level">Choose your #1 run</label>
               <div class="money-input">
                 <span aria-hidden="true">$</span>
-                <input id="payment_level" name="payment_level" type="number" min="1" max="365" step="1" value="1" required aria-describedby="placementPreview">
+                <input id="payment_level" name="payment_level" type="number" min="1" max="10000" step="1" value="1" required aria-describedby="placementPreview">
               </div>
-              <small id="placementPreview">$1 keeps your link at #1 for 24 hours.</small>
+              <small id="placementPreview">Bid at least $1 above the current leader. Already listed? You only pay the difference.</small>
             </div>
             <div class="field-row">
               <label for="email">Ownership receipt</label>
@@ -257,6 +258,6 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
     <script>
       window.__PAID_SQUARES__ = <?= $squaresJson ?>;
     </script>
-    <script src="/assets/app.js?v=20260821-premium" defer></script>
+    <script src="/assets/app.js?v=20260821-rebid" defer></script>
   </body>
 </html>

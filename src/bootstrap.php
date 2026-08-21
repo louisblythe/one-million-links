@@ -93,6 +93,7 @@ function db(): PDO
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_squares_territory ON squares(territory_key)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_squares_owner_host ON squares(owner_host)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_squares_featured_until ON squares(featured_until)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_squares_featured_amount ON squares(featured_amount_cents)');
 
     return $pdo;
 }
@@ -121,6 +122,9 @@ function ensure_square_columns(PDO $pdo): void
             $pdo->exec(sprintf('ALTER TABLE squares ADD COLUMN %s %s', $name, $definition));
         }
     }
+
+    $pdo->exec('CREATE TABLE IF NOT EXISTS featured_payments (checkout_session_id TEXT PRIMARY KEY, square_id INTEGER NOT NULL, amount_cents INTEGER NOT NULL, total_bid_cents INTEGER NOT NULL, created_at TEXT NOT NULL)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_featured_payments_square ON featured_payments(square_id)');
 }
 
 function configure_stripe(): void
@@ -183,7 +187,7 @@ function seo_head(string $title, string $description, ?string $path = '/', strin
         . '<link rel="icon" href="/favicon.svg" type="image/svg+xml">' . PHP_EOL
         . '<link rel="apple-touch-icon" href="/apple-touch-icon.png">' . PHP_EOL
         . '<link rel="manifest" href="/site.webmanifest">' . PHP_EOL
-        . '<link rel="stylesheet" href="/assets/app.css?v=20260821-premium">' . PHP_EOL
+        . '<link rel="stylesheet" href="/assets/app.css?v=20260821-rebid">' . PHP_EOL
         . datafast_analytics_script();
 }
 
@@ -398,11 +402,11 @@ function normalize_pack_size(mixed $value): int
 function normalize_payment_level(mixed $value, int $minimum): int
 {
     $level = filter_var($value, FILTER_VALIDATE_INT, [
-        'options' => ['min_range' => $minimum, 'max_range' => 365],
+        'options' => ['min_range' => $minimum, 'max_range' => 10000],
     ]);
 
     if ($level === false) {
-        throw new RuntimeException(sprintf('Choose a whole-dollar payment level between $%d and $365.', $minimum));
+        throw new RuntimeException(sprintf('Choose a whole-dollar payment level between $%d and $10,000.', $minimum));
     }
 
     return $level;
@@ -449,6 +453,31 @@ function adjacent_square_ids(int $squareId, int $packSize): array
     }
 
     return $ids;
+}
+
+function rebid_context(string $url): array
+{
+    $db = db();
+    $existing = $db->prepare('SELECT square_id, territory_key, featured_amount_cents FROM squares WHERE status = "paid" AND url = :url ORDER BY featured_amount_cents DESC, square_id ASC LIMIT 1');
+    $existing->execute(['url' => $url]);
+    $primary = $existing->fetch(PDO::FETCH_ASSOC) ?: null;
+    $highestQuery = $db->prepare('SELECT COALESCE(MAX(featured_amount_cents), 0) FROM squares WHERE status = "paid" AND featured_until > :now');
+    $highestQuery->execute(['now' => gmdate(DATE_ATOM)]);
+    $highest = (int) $highestQuery->fetchColumn();
+
+    if (!$primary) {
+        return ['square_ids' => [], 'previous_cents' => 0, 'highest_cents' => $highest];
+    }
+
+    if (!empty($primary['territory_key'])) {
+        $territory = $db->prepare('SELECT square_id FROM squares WHERE status = "paid" AND territory_key = :territory_key ORDER BY square_id ASC');
+        $territory->execute(['territory_key' => $primary['territory_key']]);
+        $squareIds = array_map('intval', $territory->fetchAll(PDO::FETCH_COLUMN));
+    } else {
+        $squareIds = [(int) $primary['square_id']];
+    }
+
+    return ['square_ids' => $squareIds, 'previous_cents' => (int) ($primary['featured_amount_cents'] ?? 0), 'highest_cents' => $highest];
 }
 
 function reserve_squares(int $squareId, int $packSize, string $label, string $url, string $category, ?string $email): array
@@ -507,7 +536,7 @@ function reserve_square(int $squareId, string $label, string $url, string $categ
     reserve_squares($squareId, 1, $label, $url, $category, $email);
 }
 
-function mark_squares_paid(array $squareIds, string $checkoutSessionId, ?string $paymentIntentId, int $featuredDays = 0): void
+function mark_squares_paid(array $squareIds, string $checkoutSessionId, ?string $paymentIntentId, int $featuredDays = 0, int $totalBidCents = 0): void
 {
     $db = db();
     $stmt = $db->prepare(
@@ -535,24 +564,31 @@ function mark_squares_paid(array $squareIds, string $checkoutSessionId, ?string 
 
         if ($featuredDays > 0 && $squareIds !== []) {
             $primaryId = validate_square_id((int) $squareIds[0]);
+            $payment = $db->prepare('INSERT OR IGNORE INTO featured_payments (checkout_session_id, square_id, amount_cents, total_bid_cents, created_at) VALUES (:checkout_session_id, :square_id, :amount_cents, :total_bid_cents, :created_at)');
+            $payment->execute([
+                'checkout_session_id' => $checkoutSessionId,
+                'square_id' => $primaryId,
+                'amount_cents' => $featuredDays * 100,
+                'total_bid_cents' => $totalBidCents,
+                'created_at' => $paidAt,
+            ]);
+            $isNewPayment = $payment->rowCount() > 0;
             $existing = $db->prepare('SELECT featured_until FROM squares WHERE square_id = :square_id');
             $existing->execute(['square_id' => $primaryId]);
+            $existingFeature = $existing->fetch(PDO::FETCH_ASSOC) ?: [];
 
-            if (!$existing->fetchColumn()) {
-                $latest = $db->prepare('SELECT MAX(featured_until) FROM squares WHERE status = "paid" AND featured_until IS NOT NULL AND square_id != :square_id');
-                $latest->execute(['square_id' => $primaryId]);
-                $latestValue = $latest->fetchColumn();
+            if ($isNewPayment) {
                 $now = new DateTimeImmutable($paidAt);
-                $latestDate = is_string($latestValue) && $latestValue !== '' ? new DateTimeImmutable($latestValue) : $now;
-                $startsAt = $latestDate > $now ? $latestDate : $now;
-                $endsAt = $startsAt->modify(sprintf('+%d days', $featuredDays));
+                $existingUntil = !empty($existingFeature['featured_until']) ? new DateTimeImmutable((string) $existingFeature['featured_until']) : $now;
+                $extensionBase = $existingUntil > $now ? $existingUntil : $now;
+                $endsAt = $extensionBase->modify(sprintf('+%d days', $featuredDays));
                 $feature = $db->prepare(
-                    'UPDATE squares SET featured_from = :featured_from, featured_until = :featured_until, featured_amount_cents = :featured_amount_cents WHERE square_id = :square_id AND featured_until IS NULL'
+                    'UPDATE squares SET featured_from = :featured_from, featured_until = :featured_until, featured_amount_cents = MAX(COALESCE(featured_amount_cents, 0), :featured_amount_cents) WHERE square_id = :square_id'
                 );
                 $feature->execute([
-                    'featured_from' => $startsAt->format(DATE_ATOM),
+                    'featured_from' => $now->format(DATE_ATOM),
                     'featured_until' => $endsAt->format(DATE_ATOM),
-                    'featured_amount_cents' => $featuredDays * 100,
+                    'featured_amount_cents' => max($totalBidCents, $featuredDays * 100),
                     'square_id' => $primaryId,
                 ]);
             }

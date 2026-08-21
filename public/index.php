@@ -145,10 +145,17 @@ try {
         $url = normalize_url((string) ($_POST['url'] ?? ''));
         $category = normalize_category((string) ($_POST['category'] ?? 'Other'));
         $packSize = normalize_pack_size($_POST['pack_size'] ?? 1);
-        $paymentLevel = normalize_payment_level($_POST['payment_level'] ?? $packSize, $packSize);
         $email = trim((string) ($_POST['email'] ?? ''));
         $email = filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null;
-        $squareIds = reserve_squares($squareId, $packSize, $label, $url, $category, $email);
+        $rebid = rebid_context($url);
+        $minimumBid = max($packSize, intdiv((int) $rebid['highest_cents'], 100) + 1, intdiv((int) $rebid['previous_cents'], 100) + 1);
+        $paymentLevel = normalize_payment_level($_POST['payment_level'] ?? $minimumBid, $minimumBid);
+        $previousBid = intdiv((int) $rebid['previous_cents'], 100);
+        $amountDue = $paymentLevel - $previousBid;
+        $squareIds = $rebid['square_ids'] !== []
+            ? $rebid['square_ids']
+            : reserve_squares($squareId, $packSize, $label, $url, $category, $email);
+        $squareId = (int) $squareIds[0];
 
         configure_stripe();
 
@@ -163,7 +170,7 @@ try {
                 'quantity' => 1,
                 'price_data' => [
                     'currency' => strtolower(env_value('APP_CURRENCY', 'usd') ?? 'usd'),
-                    'unit_amount' => $paymentLevel * 100,
+                    'unit_amount' => $amountDue * 100,
                     'product' => env_value('STRIPE_PRODUCT_ID', 'prod_Uam47pbENlHbmX'),
                 ],
             ]],
@@ -175,7 +182,10 @@ try {
                 'square_ids' => implode(',', $squareIds),
                 'pack_size' => (string) count($squareIds),
                 'payment_level' => (string) $paymentLevel,
-                'featured_days' => (string) $paymentLevel,
+                'previous_bid' => (string) $previousBid,
+                'amount_due' => (string) $amountDue,
+                'featured_days' => (string) $amountDue,
+                'total_bid_cents' => (string) ($paymentLevel * 100),
             ],
         ]);
 
@@ -212,8 +222,9 @@ try {
                 $squareIds = isset($session->metadata->square_ids)
                     ? array_map('intval', explode(',', (string) $session->metadata->square_ids))
                     : [(int) $session->client_reference_id];
-                $featuredDays = isset($session->metadata->featured_days) ? max(0, min(365, (int) $session->metadata->featured_days)) : 0;
-                mark_squares_paid($squareIds, $session->id, is_string($session->payment_intent) ? $session->payment_intent : null, $featuredDays);
+                $featuredDays = isset($session->metadata->featured_days) ? max(0, min(10000, (int) $session->metadata->featured_days)) : 0;
+                $totalBidCents = isset($session->metadata->total_bid_cents) ? max(0, (int) $session->metadata->total_bid_cents) : $featuredDays * 100;
+                mark_squares_paid($squareIds, $session->id, is_string($session->payment_intent) ? $session->payment_intent : null, $featuredDays, $totalBidCents);
             }
         }
 
@@ -241,8 +252,9 @@ try {
                 $squareIds = isset($session->metadata->square_ids)
                     ? array_map('intval', explode(',', (string) $session->metadata->square_ids))
                     : [(int) $session->client_reference_id];
-                $featuredDays = isset($session->metadata->featured_days) ? max(0, min(365, (int) $session->metadata->featured_days)) : 0;
-                mark_squares_paid($squareIds, $session->id, is_string($session->payment_intent) ? $session->payment_intent : null, $featuredDays);
+                $featuredDays = isset($session->metadata->featured_days) ? max(0, min(10000, (int) $session->metadata->featured_days)) : 0;
+                $totalBidCents = isset($session->metadata->total_bid_cents) ? max(0, (int) $session->metadata->total_bid_cents) : $featuredDays * 100;
+                mark_squares_paid($squareIds, $session->id, is_string($session->payment_intent) ? $session->payment_intent : null, $featuredDays, $totalBidCents);
             }
         }
 

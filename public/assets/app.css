@@ -1067,6 +1067,22 @@ form {
   font-weight: 750;
 }
 
+.rebid-note {
+  margin: 0;
+  padding: 11px 12px;
+  border: 1px solid #cfe3dc;
+  border-radius: 10px;
+  background: #eff8f5;
+  color: #48665e;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.rebid-note strong {
+  color: #176f61;
+}
+
 label {
   color: var(--muted);
   font-size: 0.78rem;
@@ -1931,7 +1947,7 @@ select:focus-visible {
     font-size: 0.72rem;
   }
 
-  body[data-view="list"] .claim-benefits {
+body[data-view="list"] .claim-benefits {
     display: grid;
     justify-content: start;
     text-align: left;
@@ -1954,4 +1970,10 @@ select:focus-visible {
   body[data-view="list"] .directory-row__metric {
     display: none;
   }
+}
+
+body[data-view="list"] .rebid-note {
+  width: min(680px, 100%);
+  padding: 12px 14px;
+  text-align: left;
 }

@@ -34,6 +34,7 @@ const searchResults = document.getElementById("searchResults");
 const categoryFilter = document.getElementById("categoryFilter");
 const packSizeInput = document.getElementById("pack_size");
 const paymentLevelInput = document.getElementById("payment_level");
+const linkUrlInput = document.getElementById("url");
 const placementPreview = document.getElementById("placementPreview");
 const checkoutButton = document.getElementById("checkoutButton");
 const gridViewButton = document.getElementById("gridViewButton");
@@ -152,13 +153,13 @@ function featureState(square, now = Date.now()) {
   return startsAt <= now ? "active" : "queued";
 }
 
-function placementTimeLabel(square, now = Date.now()) {
+function placementTimeLabel(square, now = Date.now(), isLeader = false) {
   const state = featureState(square, now);
   const target = state === "active" ? Date.parse(square.featuredUntil) : Date.parse(square.featuredFrom);
   const hours = Math.max(1, Math.ceil((target - now) / 3_600_000));
   const duration = hours >= 48 ? `${Math.ceil(hours / 24)} days` : `${hours} hour${hours === 1 ? "" : "s"}`;
 
-  return state === "active" ? `${duration} left at #1` : state === "queued" ? `Starts in ${duration}` : "";
+  return state === "active" ? `${duration} left${isLeader ? " at #1" : ""}` : state === "queued" ? `Starts in ${duration}` : "";
 }
 
 function buildClusters(squares) {
@@ -707,7 +708,7 @@ function renderDirectory() {
     const leftActive = featureState(left, now) === "active" ? 1 : 0;
     const rightActive = featureState(right, now) === "active" ? 1 : 0;
 
-    return rightActive - leftActive || right.clickCount - left.clickCount || String(right.paidAt).localeCompare(String(left.paidAt)) || left.id - right.id;
+    return rightActive - leftActive || right.featuredAmountCents - left.featuredAmountCents || right.clickCount - left.clickCount || String(right.paidAt).localeCompare(String(left.paidAt)) || left.id - right.id;
   });
   directoryCount.textContent = `${ranked.length.toLocaleString()} claimed link${ranked.length === 1 ? "" : "s"}`;
 
@@ -721,8 +722,8 @@ function renderDirectory() {
         <span>${escapeHtml(square.category)} · square #${square.id + 1}</span>
       </span>
       <span class="directory-row__metric">
-        <strong>${featureState(square, now) === "active" ? "#1" : formattedClicks(square.clickCount)}</strong>
-        <span>${placementTimeLabel(square, now) || `click${square.clickCount === 1 ? "" : "s"}`}</span>
+        <strong>${index === 0 && featureState(square, now) === "active" ? "#1" : square.featuredAmountCents > 0 ? `$${square.featuredAmountCents / 100}` : formattedClicks(square.clickCount)}</strong>
+        <span>${placementTimeLabel(square, now, index === 0) || `click${square.clickCount === 1 ? "" : "s"}`}</span>
       </span>
       <a class="directory-row__visit" href="${escapeHtml(visitHref(square.id))}" target="_blank" rel="noopener">Visit <span aria-hidden="true">↗</span></a>
     </li>
@@ -868,20 +869,33 @@ function updateCheckoutButton() {
   }
 
   const packSize = selectedPackSize();
-  const currentLevel = Math.max(packSize, Math.min(365, Number(paymentLevelInput?.value || packSize)));
+  const now = Date.now();
+  const highestBid = Math.max(0, ...allSquares.filter((square) => featureState(square, now) === "active").map((square) => square.featuredAmountCents / 100));
+  let normalizedUrl = "";
+  try {
+    normalizedUrl = new URL(linkUrlInput?.value || "").toString();
+  } catch {
+    normalizedUrl = "";
+  }
+  const previousListing = normalizedUrl ? allSquares.find((square) => square.url === normalizedUrl) : null;
+  const previousBid = previousListing ? previousListing.featuredAmountCents / 100 : 0;
+  const minimumBid = Math.max(packSize, highestBid + 1, previousBid + 1);
+  const currentLevel = Math.max(minimumBid, Math.min(10000, Number(paymentLevelInput?.value || minimumBid)));
+  const amountDue = currentLevel - previousBid;
 
   if (paymentLevelInput) {
-    paymentLevelInput.min = String(packSize);
+    paymentLevelInput.min = String(minimumBid);
+    paymentLevelInput.max = "10000";
     paymentLevelInput.value = String(currentLevel);
   }
   if (placementPreview) {
-    const latestBookingEnd = Math.max(0, ...allSquares.map((square) => Date.parse(square.featuredUntil || "")).filter(Number.isFinite));
-    const queueNote = latestBookingEnd > Date.now()
-      ? ` Your run starts after the current booking, around ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(latestBookingEnd))}.`
-      : " Your run starts when payment is confirmed.";
-    placementPreview.textContent = `$${currentLevel} guarantees ${currentLevel} full day${currentLevel === 1 ? "" : "s"} at #1${packSize > 1 ? ` and includes ${packSize} connected squares` : ""}.${queueNote}`;
+    placementPreview.textContent = previousListing
+      ? `Your previous $${previousBid} bid is credited. Pay $${amountDue} to raise it to $${currentLevel} and return above the current $${highestBid} leader.`
+      : `$${currentLevel} puts you above the current $${highestBid} leader and includes ${amountDue} full day${amountDue === 1 ? "" : "s"} of featured time${packSize > 1 ? ` plus ${packSize} connected squares` : ""}.`;
   }
-  checkoutButton.textContent = `Claim ${packSize} ${packSize === 1 ? "square" : "connected squares"} for $${currentLevel}`;
+  checkoutButton.textContent = previousListing
+    ? `Pay the $${amountDue} difference · reclaim #1 🚀`
+    : `Bid $${currentLevel} · claim #1`;
   renderSelectedCard(paidSquares.get(selectedId), selectedId);
   drawGrid();
 }
@@ -982,6 +996,7 @@ zoomHome.addEventListener("click", fitToOccupied);
 squareInput.addEventListener("input", () => selectSquare(Number(squareInput.value || 1) - 1, true));
 packSizeInput?.addEventListener("change", updateCheckoutButton);
 paymentLevelInput?.addEventListener("input", updateCheckoutButton);
+linkUrlInput?.addEventListener("input", updateCheckoutButton);
 companySearch.addEventListener("input", applyFilters);
 categoryFilter.addEventListener("change", () => {
   applyFilters();

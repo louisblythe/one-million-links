@@ -24,7 +24,7 @@ npx wrangler secret put STRIPE_SECRET_KEY
 npx wrangler secret put STRIPE_WEBHOOK_SECRET
 ```
 
-Checkout uses Stripe product `prod_Uam47pbENlHbmX` and creates a one-time price at the buyer's chosen whole-dollar payment level. The minimum is the selected territory price, the maximum is $365, and each dollar guarantees one full queued day in the #1 leaderboard position. Featured periods are assigned after confirmed payment and never displace an existing paid period.
+Checkout uses Stripe product `prod_Uam47pbENlHbmX` and creates a one-time price from the buyer's chosen cumulative bid. The bid must beat the highest active bid by at least $1 and cannot exceed $10,000. Returning buyers enter the exact same destination URL; their previous bid is credited and Stripe charges only the difference. Each newly paid dollar adds one day of featured time, and the highest active cumulative bid ranks #1.
 
 Deploy:
 
