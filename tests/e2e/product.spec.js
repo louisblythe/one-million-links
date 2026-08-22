@@ -97,6 +97,21 @@ test.describe("public discovery", () => {
     await page.goto("/collections/Other");
     await expect(page.getByText(label, { exact: true })).toBeVisible();
   });
+
+  test("category sponsors bid for a fixed-term ranked placement", async ({ page }) => {
+    await page.goto("/collections/Agency");
+    await expect(page.getByRole("heading", { name: "Agency sponsors" })).toBeVisible();
+    const selectedLabel = await page.locator("#sponsorUrl option:checked").textContent();
+    const firstBid = Number(await page.locator("#sponsorBid").inputValue());
+    expect(firstBid).toBeGreaterThanOrEqual(10);
+    await page.getByRole("button", { name: "Sponsor this category" }).click();
+    await expect(page).toHaveURL(/\/collections\/Agency\?sponsored=1$/);
+    await expect(page.locator(".sponsor-list")).toContainText(selectedLabel.split(" · ")[0]);
+    await expect(page.locator(".sponsor-list")).toContainText(`$${firstBid}`);
+    await expect(page.locator("#sponsorBid")).toHaveValue(String(firstBid + 1));
+    await expect(page.locator("#sponsorHelp")).toContainText("previous");
+    await expect(page.locator("#sponsorHelp")).toContainText("difference");
+  });
 });
 
 test.describe("content, rankings, and machine-readable surfaces", () => {
