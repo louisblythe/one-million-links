@@ -59,6 +59,11 @@ test.describe("public discovery", () => {
   test("inline claim form accepts any payment and calculates the top bid", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("#claimForm")).toBeVisible();
+    await expect(page.locator(".lifetime-totals")).toContainText("Total paid");
+    await expect(page.locator(".lifetime-totals")).toContainText("Outbound clicks");
+    const firstListingMetrics = page.locator(".directory-row__metric").first();
+    await expect(firstListingMetrics).toContainText("paid");
+    await expect(firstListingMetrics).toContainText("click");
     await page.locator("#url").fill("https://new-company.example/");
     await expect(page.locator("#label")).toHaveValue("New Company");
     await page.locator("#payment_level").fill("1");

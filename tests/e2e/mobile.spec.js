@@ -3,6 +3,8 @@ import { test, expect } from "@playwright/test";
 test("mobile discovery and claim flow remain usable without horizontal overflow", async ({ page }) => {
   await page.goto("/?view=list");
   await expect(page.locator("#directoryList")).toBeVisible();
+  await expect(page.locator(".lifetime-totals")).toBeVisible();
+  await expect(page.locator(".directory-row__metric").first()).toBeVisible();
   const viewport = page.viewportSize();
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(width).toBeLessThanOrEqual(viewport.width + 1);

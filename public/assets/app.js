@@ -933,8 +933,8 @@ function renderDirectory() {
         <span class="directory-row__description">${escapeHtml(square.description || `${square.category} · square #${square.id + 1}`)}</span>
       </span>
       <span class="directory-row__metric">
-        <strong>${index === 0 && featureState(square, now) === "active" ? "#1" : square.featuredAmountCents > 0 ? `$${square.featuredAmountCents / 100}` : formattedClicks(square.clickCount)}</strong>
-        <span>${placementTimeLabel(square, now, index === 0) || `click${square.clickCount === 1 ? "" : "s"}`}</span>
+        <strong>$${new Intl.NumberFormat().format(square.featuredAmountCents / 100)} paid</strong>
+        <span>${new Intl.NumberFormat().format(square.clickCount)} click${square.clickCount === 1 ? "" : "s"}</span>
       </span>
       ${directoryActions(square)}
     </li>
@@ -1055,6 +1055,7 @@ function renderTrending(squares) {
       <span>
         <strong>${escapeHtml(square.label)}</strong>
         <span>${escapeHtml(square.category)} · ${escapeHtml(square.host)}</span>
+        <span>$${new Intl.NumberFormat().format(square.featuredAmountCents / 100)} paid · ${new Intl.NumberFormat().format(square.clickCount)} clicks</span>
       </span>
       <em>#${square.id + 1}</em>
     </a>

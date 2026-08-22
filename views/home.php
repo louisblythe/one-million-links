@@ -1,6 +1,8 @@
 <?php
 
 $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
+$totalTraffic = array_sum(array_map(static fn (array $square): int => (int) ($square['click_count'] ?? 0), $paidSquares));
+$totalPaymentsCents = array_sum(array_map(static fn (array $square): int => (int) ($square['featured_amount_cents'] ?? 0), $paidSquares));
 
 ?><!doctype html>
 <html lang="en">
@@ -54,6 +56,10 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
               <button id="checkoutButton" type="submit">Continue to Stripe · $1</button>
             </form>
           </section>
+          <dl class="lifetime-totals" aria-label="All-time marketplace totals">
+            <div><dt>Total paid</dt><dd>$<?= number_format($totalPaymentsCents / 100, $totalPaymentsCents % 100 === 0 ? 0 : 2) ?></dd></div>
+            <div><dt>Outbound clicks</dt><dd><?= number_format($totalTraffic) ?></dd></div>
+          </dl>
         </div>
         <div class="stats live-stats" aria-label="Live site activity" aria-live="polite">
           <span class="live-stats__status"><i aria-hidden="true"></i><strong id="activeNow">—</strong> active now</span>
