@@ -27,6 +27,7 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
           <p class="hero-kicker">Permanent listing. Live competition.</p>
           <h1>The link leaderboard. <em>The highest active bid takes #1.</em></h1>
           <p class="hero-subhead">No ads. No algorithms. Claim a permanent branded listing for $1, then promote it for as long as you choose. Every click lands on your site.</p>
+          <button class="hero-claim-button" type="button" data-open-claim>Claim #1 →</button>
         </div>
         <div class="stats">
           <strong id="claimedCount"><?= count($paidSquares) ?></strong>
@@ -116,10 +117,12 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
           <div class="hover-preview" id="hoverPreview" hidden></div>
         </div>
 
+        <dialog class="claim-dialog" id="claimDialog" aria-labelledby="claim-dialog-title">
+          <button class="claim-dialog__close" type="button" data-close-claim aria-label="Close claim form">×</button>
         <aside class="claim-panel">
           <div class="claim-copy">
             <p class="eyebrow">Featured placement</p>
-            <h2>Claim #1 for as long as you choose</h2>
+            <h2 id="claim-dialog-title">Claim #1 for as long as you choose</h2>
             <ul class="claim-benefits">
               <li>Your listing stays permanently</li>
               <li>Every extra dollar adds a day at the top</li>
@@ -231,6 +234,7 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
             </div>
           </div>
         </aside>
+        </dialog>
       </section>
 
       <section class="trending-section" aria-labelledby="trending-title">
@@ -282,6 +286,6 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
       window.__PAID_SQUARES__ = <?= $squaresJson ?>;
     </script>
     <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js" defer></script>
-    <script src="/assets/app.js?v=20260822-tight" defer></script>
+    <script src="/assets/app.js?v=20260822-modal" defer></script>
   </body>
 </html>

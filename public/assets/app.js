@@ -48,6 +48,7 @@ const purchaseMapPanel = document.getElementById("purchaseMapPanel");
 const mapLocationCount = document.getElementById("mapLocationCount");
 const mapEmptyState = document.getElementById("mapEmptyState");
 const zoomControls = document.querySelector(".zoom-controls");
+const claimDialog = document.getElementById("claimDialog");
 
 const rawSquares = window.__PAID_SQUARES__ || [];
 const allSquares = rawSquares.map((square) => {
@@ -1065,6 +1066,12 @@ function updateCheckoutButton() {
   drawGrid();
 }
 
+function openClaimDialog() {
+  if (!claimDialog) return;
+  claimDialog.showModal();
+  requestAnimationFrame(() => linkUrlInput?.focus());
+}
+
 canvas.addEventListener("click", (event) => {
   if (isPanning) {
     return;
@@ -1174,8 +1181,12 @@ listViewButton.addEventListener("click", () => setActiveView("list"));
 gridViewButton.addEventListener("click", () => setActiveView("grid"));
 mapViewButton.addEventListener("click", () => setActiveView("map"));
 document.querySelector("[data-focus-claim]")?.addEventListener("click", () => {
-  document.querySelector(".claim-panel")?.scrollIntoView({ block: "start" });
-  document.getElementById("label")?.focus({ preventScroll: true });
+  openClaimDialog();
+});
+document.querySelector("[data-open-claim]")?.addEventListener("click", openClaimDialog);
+document.querySelector("[data-close-claim]")?.addEventListener("click", () => claimDialog?.close());
+claimDialog?.addEventListener("click", (event) => {
+  if (event.target === claimDialog) claimDialog.close();
 });
 window.addEventListener("resize", resizeCanvas);
 

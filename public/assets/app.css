@@ -2197,6 +2197,88 @@ body[data-directory-mode="true"] .claim-panel form .field-row:has(#payment_level
   }
 }
 
+/* Centre hero copy against the full directory column, not its intrinsic text width. */
+body[data-directory-mode="true"] .hero-copy {
+  width: 100%;
+  justify-items: center;
+  text-align: center;
+}
+
+body[data-directory-mode="true"] .masthead {
+  grid-template-columns: minmax(0, 1fr);
+  justify-content: stretch;
+}
+
+body[data-directory-mode="true"] .hero-kicker,
+body[data-directory-mode="true"] h1,
+body[data-directory-mode="true"] .hero-subhead {
+  margin-right: auto;
+  margin-left: auto;
+}
+
+body[data-directory-mode="true"] .hero-claim-button {
+  min-width: 190px;
+  min-height: 50px;
+  margin-top: 4px;
+  border-radius: 12px;
+  background: #177e6d;
+  font-size: 0.95rem;
+}
+
+body[data-directory-mode="true"] .hero-claim-button:hover {
+  background: #11695b;
+}
+
+.claim-dialog {
+  width: min(920px, calc(100vw - 32px));
+  max-width: none;
+  max-height: min(90dvh, 760px);
+  padding: 0;
+  overflow: auto;
+  border: 0;
+  border-radius: 20px;
+  background: transparent;
+}
+
+.claim-dialog::backdrop {
+  background: rgba(16, 37, 31, 0.58);
+}
+
+.claim-dialog__close {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: 1px solid #dbe5e1;
+  border-radius: 50%;
+  background: #fff;
+  color: #10251f;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+body[data-directory-mode="true"] .claim-dialog .claim-panel {
+  width: 100%;
+  margin: 0;
+  box-shadow: none;
+}
+
+@media (max-width: 760px) {
+  body[data-directory-mode="true"] .hero-claim-button {
+    min-width: 170px;
+    min-height: 46px;
+  }
+
+  .claim-dialog {
+    width: calc(100vw - 20px);
+    max-height: 92dvh;
+    border-radius: 16px;
+  }
+}
+
 /* Compact premium layout. Keep these final so legacy grid rules cannot override it. */
 body[data-directory-mode="true"] .masthead {
   gap: 10px;
