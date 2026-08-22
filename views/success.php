@@ -22,7 +22,7 @@
             if (sessionStorage.getItem(storageKey)) return;
             sessionStorage.setItem(storageKey, '1');
           } catch (_) {}
-          window.piqo('event', 'purchase', props);
+          window.piqo('purchase', { props: props });
         }, { once: true });
       </script>
     <?php endif; ?>

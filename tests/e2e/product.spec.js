@@ -64,7 +64,7 @@ test.describe("public discovery", () => {
     await expect(page.locator("#label")).toHaveValue("New Company");
     const minimumBid = Number(await page.locator("#payment_level").getAttribute("min"));
     expect(minimumBid).toBeGreaterThanOrEqual(1);
-    await expect(page.locator("#checkoutButton")).toContainText(`Bid $${minimumBid}`);
+    await expect(page.locator("#checkoutButton")).toContainText(`$${minimumBid}`);
     await page.getByRole("button", { name: "Close claim form" }).click();
     await expect(page.locator("#claimDialog")).not.toBeVisible();
   });
@@ -79,16 +79,18 @@ test.describe("public discovery", () => {
     const label = `Brand ${square}`;
     await page.goto(`/?square=${square}`);
     await page.getByRole("button", { name: /Claim #1/ }).click();
-    await expect.poll(() => page.evaluate(() => window.__PIQO_EVENTS__?.some((event) => event[1] === "claim_started"))).toBeTruthy();
+    await expect.poll(() => page.evaluate(() => window.__PIQO_EVENTS__?.some((event) => event[0] === "claim_started"))).toBeTruthy();
     await page.locator("#url").fill(`https://brand-${square}.example/`);
     await expect(page.locator("#label")).toHaveValue(label);
     await page.locator("#checkoutButton").click();
     await expect(page).toHaveURL(/\/success\?session_id=e2e_/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Square claimed");
     await expect(page.getByText(label)).toBeVisible();
-    await expect.poll(() => page.evaluate(() => window.__PIQO_EVENTS__?.some((event) => event[1] === "purchase"))).toBeTruthy();
+    await expect.poll(() => page.evaluate(() => window.__PIQO_EVENTS__?.some((event) => event[0] === "purchase"))).toBeTruthy();
 
-    await page.goto(`/squares/${square}`);
+    const listingPath = await page.getByRole("link", { name: "View live listing" }).getAttribute("href");
+    expect(listingPath).toMatch(/^\/squares\/\d+$/);
+    await page.goto(listingPath);
     await expect(page.getByRole("heading", { level: 1 })).toContainText(label);
     await page.goto(`/profile/brand-${square}.example`);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(label);

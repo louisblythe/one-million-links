@@ -57,7 +57,7 @@ const claimForm = claimDialog?.querySelector('form[action="/checkout"]');
 
 function trackFunnelEvent(name, props = {}) {
   if (typeof window.piqo === "function") {
-    window.piqo("event", name, props);
+    window.piqo(name, { props });
   }
 }
 

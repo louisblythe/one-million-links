@@ -218,7 +218,7 @@ function seo_head(string $title, string $description, ?string $path = '/', strin
         . '<link rel="icon" href="/favicon.svg" type="image/svg+xml">' . PHP_EOL
         . '<link rel="apple-touch-icon" href="/apple-touch-icon.png">' . PHP_EOL
         . '<link rel="manifest" href="/site.webmanifest">' . PHP_EOL
-        . '<link rel="stylesheet" href="/assets/app.css?v=20260822-recurring-funnel">' . PHP_EOL
+        . '<link rel="stylesheet" href="/assets/app.css?v=20260822-recurring-funnel-2">' . PHP_EOL
         . datafast_analytics_script()
         . piqo_analytics_script();
 }
