@@ -35,6 +35,7 @@ const companySearch = document.getElementById("companySearch");
 const searchResults = document.getElementById("searchResults");
 const categoryFilter = document.getElementById("categoryFilter");
 const packSizeInput = document.getElementById("pack_size");
+const promotionTypeInput = document.getElementById("promotion_type");
 const paymentLevelInput = document.getElementById("payment_level");
 const linkUrlInput = document.getElementById("url");
 const labelInput = document.getElementById("label");
@@ -90,7 +91,7 @@ const territories = buildTerritories(allSquares);
 let visibleSquares = allSquares;
 let visibleSquareIds = new Set(visibleSquares.map((square) => square.id));
 let clusters = buildClusters(visibleSquares);
-let selectedId = Number(squareInput.value || 1) - 1;
+let selectedId = Number(squareInput?.value || 1) - 1;
 let hoveredId = null;
 let zoom = START_ZOOM;
 let originX = 0;
@@ -376,10 +377,8 @@ function drawGrid() {
   drawOccupiedBlocks();
   drawHeatmap(view);
   drawTerritoryOutlines();
-  drawExpansionPreview();
-  drawSelection(selectedId, "#0b6bcb", 2);
 
-  if (hoveredId !== null && hoveredId !== selectedId) {
+  if (hoveredId !== null && paidSquares.has(hoveredId)) {
     drawSelection(hoveredId, "#14161a", 1.5);
   }
 }
@@ -577,7 +576,7 @@ function selectSquare(squareId, shouldCenter = false) {
   const claimed = paidSquares.get(boundedId);
   selectedId = boundedId;
 
-  squareInput.value = String(boundedId + 1);
+  if (squareInput) squareInput.value = String(boundedId + 1);
   selectedLabel.textContent = `#${boundedId + 1}${claimed ? ` · ${claimed.label}` : ""}`;
   renderSelectedCard(claimed, boundedId);
 
@@ -764,7 +763,7 @@ function purchaseLocationGeoJson() {
         label: square.label,
         host: square.host,
         location: [square.purchaseCity, square.purchaseCountry].filter(Boolean).join(", ") || "Approximate location",
-        sourceLabel: square.locationSource === "estimated_headquarters" ? "Estimated headquarters" : "Checkout location",
+        sourceLabel: square.locationSource === "estimated_headquarters" ? "Estimated headquarters" : square.locationSource === "country_centroid" ? "Country selected by buyer" : "Checkout location",
         logo: square.logoUrl || logoUrl(square.host),
         color: square.color,
       },
@@ -1037,7 +1036,6 @@ function updateCheckoutButton() {
     return;
   }
 
-  const packSize = selectedPackSize();
   const now = Date.now();
   const highestBid = Math.max(0, ...allSquares.filter((square) => featureState(square, now) === "active").map((square) => square.featuredAmountCents / 100));
   let normalizedUrl = "";
@@ -1047,31 +1045,34 @@ function updateCheckoutButton() {
     normalizedUrl = "";
   }
   const previousListing = normalizedUrl ? allSquares.find((square) => square.url === normalizedUrl) : null;
-  const unavailableSquareIds = adjacentIds(selectedId, packSize).filter((squareId) => paidSquares.has(squareId));
-  const packIsAvailable = previousListing || unavailableSquareIds.length === 0;
   const previousBid = previousListing ? previousListing.featuredAmountCents / 100 : 0;
-  const minimumBid = Math.max(packSize, highestBid + 1, previousBid + 1);
-  const currentLevel = Math.max(minimumBid, Math.min(10000, Number(paymentLevelInput?.value || minimumBid)));
+  const monthly = promotionTypeInput?.value === "monthly";
+  const minimumBid = Math.max(1, highestBid + 1, previousBid + 1);
+  const monthlyLevel = Math.max(highestBid + 1, previousBid + 30);
+  const currentLevel = monthly
+    ? monthlyLevel
+    : Math.max(minimumBid, Math.min(10000, Number(paymentLevelInput?.value || minimumBid)));
   const amountDue = currentLevel - previousBid;
 
   if (paymentLevelInput) {
     paymentLevelInput.min = String(minimumBid);
     paymentLevelInput.max = "10000";
     paymentLevelInput.value = String(currentLevel);
+    paymentLevelInput.disabled = monthly;
   }
   if (placementPreview) {
-    placementPreview.textContent = !packIsAvailable
-      ? `${unavailableSquareIds.length} square${unavailableSquareIds.length === 1 ? " is" : "s are"} already claimed in this territory. Choose another homepage spot or a smaller expansion.`
+    placementPreview.textContent = monthly
+      ? `Pay $${amountDue} for a winning $${currentLevel} bid and 30 days of featured placement. This is a one-time purchase, not an auto-renewing subscription.`
       : previousListing
       ? `Your previous $${previousBid} bid is credited. Pay $${amountDue} to raise it to $${currentLevel} and return above the current $${highestBid} leader.`
-      : `$${currentLevel} puts you above the current $${highestBid} leader and includes ${amountDue} full day${amountDue === 1 ? "" : "s"} of featured time${packSize > 1 ? ` plus ${packSize} connected squares` : ""}.`;
+      : `$${currentLevel} puts you above the current $${highestBid} leader and includes ${amountDue} full day${amountDue === 1 ? "" : "s"} of featured time.`;
   }
-  checkoutButton.disabled = !packIsAvailable;
-  checkoutButton.textContent = !packIsAvailable
-    ? "Choose an available territory"
+  checkoutButton.disabled = false;
+  checkoutButton.textContent = monthly
+    ? `Claim monthly · $${amountDue}`
     : previousListing
     ? `Pay the $${amountDue} difference · reclaim #1 🚀`
-    : `Bid $${currentLevel} · claim #1`;
+    : `Claim my spot · $${currentLevel}`;
   renderSelectedCard(paidSquares.get(selectedId), selectedId);
   drawGrid();
 }
@@ -1094,7 +1095,7 @@ canvas.addEventListener("click", (event) => {
     return;
   }
 
-  selectSquare(squareId);
+  openClaimDialog();
 });
 
 canvas.addEventListener("pointerdown", (event) => {
@@ -1175,8 +1176,9 @@ zoomRange.addEventListener("input", () => setZoom(Number(zoomRange.value)));
 zoomOut.addEventListener("click", () => setZoom(zoom - 1));
 zoomIn.addEventListener("click", () => setZoom(zoom + 1));
 zoomHome.addEventListener("click", fitToOccupied);
-squareInput.addEventListener("input", () => selectSquare(Number(squareInput.value || 1) - 1, true));
+squareInput?.addEventListener("input", () => selectSquare(Number(squareInput.value || 1) - 1, true));
 packSizeInput?.addEventListener("change", updateCheckoutButton);
+promotionTypeInput?.addEventListener("change", updateCheckoutButton);
 paymentLevelInput?.addEventListener("input", updateCheckoutButton);
 linkUrlInput?.addEventListener("input", () => {
   inferBrandFromUrl();
@@ -1205,7 +1207,7 @@ resizeCanvas();
 renderPanels();
 applyFilters();
 setActiveView(activeView);
-const initialSelection = Number(squareInput.value || 1) - 1;
+const initialSelection = Number(squareInput?.value || 1) - 1;
 if (allSquares.length > 0 && initialSelection <= 0) {
   focusFeaturedBlock();
 }

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use Stripe\Stripe;
+use Stripe\StripeClient;
 
 require __DIR__ . '/../vendor/autoload.php';
 
 const TOTAL_SQUARES = 1000000;
 const GRID_WIDTH = 1000;
-const STRIPE_API_VERSION = '2026-06-24.dahlia';
+const STRIPE_API_VERSION = '2026-07-29.dahlia';
 const DATAFAST_WEBSITE_ID = 'dfid_covNyYU25Nl5a20HXqsd3';
 const DATAFAST_DOMAIN = 'linkforadollar.com';
 
@@ -142,7 +142,7 @@ function ensure_square_columns(PDO $pdo): void
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_featured_payments_square ON featured_payments(square_id)');
 }
 
-function configure_stripe(): void
+function configure_stripe(): StripeClient
 {
     $secret = env_value('STRIPE_SECRET_KEY');
 
@@ -150,8 +150,10 @@ function configure_stripe(): void
         throw new RuntimeException('Set STRIPE_SECRET_KEY in .env before creating a checkout session.');
     }
 
-    Stripe::setApiKey($secret);
-    Stripe::setApiVersion(STRIPE_API_VERSION);
+    return new StripeClient([
+        'api_key' => $secret,
+        'stripe_version' => STRIPE_API_VERSION,
+    ]);
 }
 
 function json_response(array $payload, int $status = 200): never
@@ -511,7 +513,7 @@ function reserve_squares(int $squareId, int $packSize, string $label, string $de
     $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($existing) {
-        throw new RuntimeException('One or more squares in that expansion pack have already been claimed.');
+        throw new RuntimeException('That listing position is no longer available.');
     }
 
     $territoryKey = bin2hex(random_bytes(8));
@@ -556,6 +558,52 @@ function reserve_squares(int $squareId, int $packSize, string $label, string $de
     return $ids;
 }
 
+function reserve_next_listing(string $label, string $description, string $url, string $category, ?string $email, ?string $logoUrl = null): int
+{
+    $stmt = db()->query('WITH RECURSIVE candidate(square_id) AS (SELECT 0 UNION ALL SELECT square_id + 1 FROM candidate WHERE square_id < 999999) SELECT candidate.square_id FROM candidate LEFT JOIN squares ON squares.square_id = candidate.square_id WHERE squares.square_id IS NULL LIMIT 1');
+    $squareId = $stmt->fetchColumn();
+
+    if ($squareId === false) {
+        throw new RuntimeException('The listing directory is full.');
+    }
+
+    return (int) reserve_squares((int) $squareId, 1, $label, $description, $url, $category, $email, $logoUrl)[0];
+}
+
+function release_pending_listing(int $squareId): void
+{
+    $stmt = db()->prepare('DELETE FROM squares WHERE square_id = :square_id AND status = "pending"');
+    $stmt->execute(['square_id' => validate_square_id($squareId)]);
+}
+
+function country_location(string $country): ?array
+{
+    $country = substr(trim($country), 0, 80);
+    if ($country === '') {
+        return null;
+    }
+    $endpoint = 'https://nominatim.openstreetmap.org/search?country=' . rawurlencode($country) . '&format=jsonv2&limit=1&featuretype=country&addressdetails=1';
+    $context = stream_context_create(['http' => ['timeout' => 3, 'ignore_errors' => true, 'header' => "User-Agent: LinkForADollar/1.0 (https://linkforadollar.com)\r\nAccept-Language: en\r\n"]]);
+    $payload = @file_get_contents($endpoint, false, $context);
+    $decoded = $payload ? json_decode($payload, true) : null;
+    $result = $decoded[0] ?? null;
+    $latitude = $result['lat'] ?? null;
+    $longitude = $result['lon'] ?? null;
+    $countryCode = strtoupper((string) ($result['address']['country_code'] ?? (preg_match('/^[a-z]{2}$/i', $country) ? $country : '')));
+
+    if (!is_array($result) || !preg_match('/^[A-Z]{2}$/', $countryCode) || !is_numeric($latitude) || !is_numeric($longitude)) {
+        throw new RuntimeException('We could not find that country. Enter its full English name or two-letter country code.');
+    }
+
+    return [
+        'city' => substr((string) ($result['name'] ?? $result['display_name'] ?? $country), 0, 80),
+        'country' => $countryCode,
+        'latitude' => (float) $latitude,
+        'longitude' => (float) $longitude,
+        'source' => 'country_centroid',
+    ];
+}
+
 function reserve_square(int $squareId, string $label, string $url, string $category, ?string $email): void
 {
     reserve_squares($squareId, 1, $label, '', $url, $category, $email);
@@ -575,6 +623,7 @@ function stripe_purchase_location(object $session): ?array
         'country' => substr(strtoupper((string) ($session->metadata->purchase_country ?? '')), 0, 2),
         'latitude' => $latitude,
         'longitude' => $longitude,
+        'source' => substr((string) ($session->metadata->location_source ?? 'checkout'), 0, 40),
     ];
 }
 
@@ -616,12 +665,13 @@ function mark_squares_paid(array $squareIds, string $checkoutSessionId, ?string 
         }
 
         if ($purchaseLocation !== null && $squareIds !== []) {
-            $location = $db->prepare('UPDATE squares SET purchase_city = COALESCE(purchase_city, :city), purchase_country = COALESCE(purchase_country, :country), purchase_latitude = COALESCE(purchase_latitude, :latitude), purchase_longitude = COALESCE(purchase_longitude, :longitude), location_source = COALESCE(location_source, "checkout") WHERE square_id = :square_id');
+            $location = $db->prepare('UPDATE squares SET purchase_city = :city, purchase_country = :country, purchase_latitude = :latitude, purchase_longitude = :longitude, location_source = :source WHERE square_id = :square_id');
             $location->execute([
                 'city' => $purchaseLocation['city'],
                 'country' => $purchaseLocation['country'],
                 'latitude' => $purchaseLocation['latitude'],
                 'longitude' => $purchaseLocation['longitude'],
+                'source' => $purchaseLocation['source'] ?? 'country_centroid',
                 'square_id' => validate_square_id((int) $squareIds[0]),
             ]);
         }

@@ -114,7 +114,7 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
               <span>New claims appear here using an approximate headquarters or checkout location.</span>
               <button type="button" data-focus-claim>Claim the first mapped link</button>
             </div>
-            <p class="map-privacy-note">Existing listings use estimated headquarters locations. New claims use approximate city-level checkout locations from Cloudflare. We do not store IP addresses.</p>
+            <p class="map-privacy-note">Markers show buyer-selected country centres from OpenStreetMap or approximate legacy locations. We do not store IP addresses.</p>
           </section>
           <div class="hover-preview" id="hoverPreview" hidden></div>
         </div>
@@ -127,17 +127,13 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
             <h2 id="claim-dialog-title">Claim #1 for as long as you choose</h2>
             <ul class="claim-benefits">
               <li>Your listing stays permanently</li>
-              <li>Every extra dollar adds a day at the top</li>
-              <li>Previous bids are credited when you reclaim #1</li>
+              <li>Bid for rank without choosing a square</li>
+              <li>Choose a custom bid or a one-time 30-day placement</li>
             </ul>
-            <p class="rebid-note"><strong>Outbid or be outbid.</strong> Enter the same URL again and your previous payment is credited. You only pay the difference needed to return to the top. 🚀</p>
+            <p class="rebid-note"><strong>Outbid or be outbid.</strong> Enter the same URL again and your previous bid is credited. We automatically calculate the amount needed to return to #1.</p>
           </div>
 
           <form action="/checkout" method="post">
-            <div class="field-row">
-              <label for="square_id">Homepage spot</label>
-              <input id="square_id" name="square_id" type="number" min="1" max="1000000" value="<?= (int) $selectedSquare ?>" required>
-            </div>
             <div class="field-row">
               <label for="label">Friendly title</label>
               <input id="label" name="label" maxlength="80" placeholder="What should we call you?" required>
@@ -149,6 +145,11 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
             <div class="field-row logo-field">
               <label for="logo_url">Logo URL <span>(optional)</span></label>
               <input id="logo_url" name="logo_url" type="url" maxlength="500" placeholder="https://yourwebsite.com/logo.png">
+            </div>
+            <div class="field-row">
+              <label for="country">Country <span>(optional)</span></label>
+              <input id="country" name="country" maxlength="80" autocomplete="country-name" placeholder="Australia">
+              <small>Used only to place your listing at the country centre on the public map.</small>
             </div>
             <div class="field-row description-field">
               <label for="description">Friendly description <span>(optional)</span></label>
@@ -169,12 +170,10 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
               </select>
             </div>
             <div class="field-row">
-              <label for="pack_size">Expansion</label>
-              <select id="pack_size" name="pack_size">
-                <option value="1">1 square - $1</option>
-                <option value="4">2x2 territory - $4</option>
-                <option value="10">10 connected squares - $10</option>
-                <option value="25">5x5 territory - $25</option>
+              <label for="promotion_type">Placement</label>
+              <select id="promotion_type" name="promotion_type">
+                <option value="bid">Custom rank bid</option>
+                <option value="monthly">30-day top placement</option>
               </select>
             </div>
             <div class="field-row payment-level-field">
@@ -201,12 +200,12 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
               </select>
             </div>
             <p class="auto-brand-note">We’ll suggest a title from your website. Add your own logo and a short introduction to make the listing feel like you.</p>
-            <button id="checkoutButton" type="submit">Claim my rank →</button>
+            <button id="checkoutButton" type="submit">Claim my spot</button>
           </form>
 
-          <div class="selection">
-            <span>Selected</span>
-            <strong id="selectedLabel">#<?= (int) $selectedSquare ?></strong>
+          <div class="selection" hidden>
+            <span>Listing</span>
+            <strong id="selectedLabel">Ready</strong>
             <a id="selectedLink" href="#" target="_blank" rel="noopener">Open claimed link</a>
             <div class="selected-card" id="selectedCard"></div>
           </div>

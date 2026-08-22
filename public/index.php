@@ -147,34 +147,65 @@ try {
     }
 
     if ($method === 'POST' && $path === '/checkout') {
-        $squareId = validate_square_id(((int) ($_POST['square_id'] ?? 1)) - 1);
         $label = normalize_label((string) ($_POST['label'] ?? ''));
         $description = normalize_description((string) ($_POST['description'] ?? ''));
         $url = normalize_url((string) ($_POST['url'] ?? ''));
         $logoUrl = trim((string) ($_POST['logo_url'] ?? ''));
         $logoUrl = $logoUrl === '' ? null : normalize_url($logoUrl);
         $category = normalize_category((string) ($_POST['category'] ?? 'Other'));
-        $packSize = normalize_pack_size($_POST['pack_size'] ?? 1);
+        $promotionType = ($_POST['promotion_type'] ?? 'bid') === 'monthly' ? 'monthly' : 'bid';
         $email = trim((string) ($_POST['email'] ?? ''));
         $email = filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null;
         $rebid = rebid_context($url);
-        $minimumBid = max($packSize, intdiv((int) $rebid['highest_cents'], 100) + 1, intdiv((int) $rebid['previous_cents'], 100) + 1);
-        $paymentLevel = normalize_payment_level($_POST['payment_level'] ?? $minimumBid, $minimumBid);
         $previousBid = intdiv((int) $rebid['previous_cents'], 100);
+        $highestBid = intdiv((int) $rebid['highest_cents'], 100);
+        $minimumBid = max(1, $highestBid + 1, $previousBid + 1);
+        $paymentLevel = $promotionType === 'monthly'
+            ? max($highestBid + 1, $previousBid + 30)
+            : normalize_payment_level($_POST['payment_level'] ?? $minimumBid, $minimumBid);
         $amountDue = $paymentLevel - $previousBid;
+        $featuredDays = $promotionType === 'monthly' ? 30 : $amountDue;
+        $purchaseLocation = country_location((string) ($_POST['country'] ?? ''));
+        $isNewListing = $rebid['square_ids'] === [];
         $squareIds = $rebid['square_ids'] !== []
             ? $rebid['square_ids']
-            : reserve_squares($squareId, $packSize, $label, $description, $url, $category, $email, $logoUrl);
+            : [reserve_next_listing($label, $description, $url, $category, $email, $logoUrl)];
         $squareId = (int) $squareIds[0];
 
-        configure_stripe();
+        $stripe = configure_stripe();
 
-        $session = \Stripe\Checkout\Session::create([
+        $metadata = [
+            'square_id' => (string) $squareId,
+            'label' => $label,
+            'description' => $description,
+            'url' => $url,
+            'logo_url' => $logoUrl ?? '',
+            'category' => $category,
+            'square_ids' => implode(',', $squareIds),
+            'promotion_type' => $promotionType,
+            'payment_level' => (string) $paymentLevel,
+            'previous_bid' => (string) $previousBid,
+            'amount_due' => (string) $amountDue,
+            'featured_days' => (string) $featuredDays,
+            'total_bid_cents' => (string) ($paymentLevel * 100),
+        ];
+        if ($purchaseLocation !== null) {
+            $metadata += [
+                'purchase_city' => $purchaseLocation['city'],
+                'purchase_country' => $purchaseLocation['country'],
+                'purchase_latitude' => (string) $purchaseLocation['latitude'],
+                'purchase_longitude' => (string) $purchaseLocation['longitude'],
+                'location_source' => $purchaseLocation['source'],
+            ];
+        }
+
+        try {
+            $session = $stripe->checkout->sessions->create([
             'mode' => 'payment',
             'client_reference_id' => (string) $squareId,
             'customer_email' => $email,
             'success_url' => app_url('/success?session_id={CHECKOUT_SESSION_ID}'),
-            'cancel_url' => app_url('/?square=' . ($squareId + 1) . '&cancelled=1'),
+            'cancel_url' => app_url('/?cancelled=1'),
             'integration_identifier' => 'featured_placement_' . random_letters(8),
             'line_items' => [[
                 'quantity' => 1,
@@ -184,22 +215,14 @@ try {
                     'product' => env_value('STRIPE_PRODUCT_ID', 'prod_Uam47pbENlHbmX'),
                 ],
             ]],
-            'metadata' => [
-                'square_id' => (string) $squareId,
-                'label' => $label,
-                'description' => $description,
-                'url' => $url,
-                'logo_url' => $logoUrl ?? '',
-                'category' => $category,
-                'square_ids' => implode(',', $squareIds),
-                'pack_size' => (string) count($squareIds),
-                'payment_level' => (string) $paymentLevel,
-                'previous_bid' => (string) $previousBid,
-                'amount_due' => (string) $amountDue,
-                'featured_days' => (string) $amountDue,
-                'total_bid_cents' => (string) ($paymentLevel * 100),
-            ],
-        ]);
+                'metadata' => $metadata,
+            ]);
+        } catch (Throwable $error) {
+            if ($isNewListing) {
+                release_pending_listing($squareId);
+            }
+            throw $error;
+        }
 
         redirect_to($session->url);
     }
@@ -227,8 +250,8 @@ try {
         }
 
         if ($sessionId !== '') {
-            configure_stripe();
-            $session = \Stripe\Checkout\Session::retrieve($sessionId);
+            $stripe = configure_stripe();
+            $session = $stripe->checkout->sessions->retrieve($sessionId);
 
             if (($session->payment_status ?? null) === 'paid') {
                 $squareIds = isset($session->metadata->square_ids)
@@ -279,12 +302,6 @@ try {
 } catch (Throwable $e) {
     if ($path === '/api/squares' || $path === '/stripe/webhook') {
         json_response(['error' => $e->getMessage()], 400);
-    }
-
-    if ($path === '/checkout' && $e->getMessage() === 'One or more squares in that expansion pack have already been claimed.') {
-        http_response_code(409);
-        header('X-Robots-Tag: noindex, follow');
-        render('error', ['message' => 'That territory was claimed before checkout started. Go back and choose another homepage spot or a smaller expansion.']);
     }
 
     http_response_code(500);
