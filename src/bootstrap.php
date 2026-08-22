@@ -440,11 +440,11 @@ function normalize_pack_size(mixed $value): int
 function normalize_payment_level(mixed $value, int $minimum): int
 {
     $level = filter_var($value, FILTER_VALIDATE_INT, [
-        'options' => ['min_range' => $minimum, 'max_range' => 10000],
+        'options' => ['min_range' => $minimum, 'max_range' => 999999],
     ]);
 
     if ($level === false) {
-        throw new RuntimeException(sprintf('Choose a whole-dollar payment level between $%d and $10,000.', $minimum));
+        throw new RuntimeException(sprintf('Choose a whole-dollar payment amount between $%d and $999,999.', $minimum));
     }
 
     return $level;

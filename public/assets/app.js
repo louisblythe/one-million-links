@@ -37,7 +37,6 @@ const categoryFilter = document.getElementById("categoryFilter");
 const packSizeInput = document.getElementById("pack_size");
 const promotionTypeInput = document.getElementById("promotion_type");
 const paymentLevelInput = document.getElementById("payment_level");
-const paymentLevelLabel = document.querySelector('label[for="payment_level"]');
 const linkUrlInput = document.getElementById("url");
 const labelInput = document.getElementById("label");
 const placementPreview = document.getElementById("placementPreview");
@@ -52,8 +51,7 @@ const purchaseMapPanel = document.getElementById("purchaseMapPanel");
 const mapLocationCount = document.getElementById("mapLocationCount");
 const mapEmptyState = document.getElementById("mapEmptyState");
 const zoomControls = document.querySelector(".zoom-controls");
-const claimDialog = document.getElementById("claimDialog");
-const claimForm = claimDialog?.querySelector('form[action="/checkout"]');
+const claimForm = document.querySelector('#claimForm form[action="/checkout"]');
 
 function trackFunnelEvent(name, props = {}) {
   if (typeof window.piqo === "function") {
@@ -619,14 +617,16 @@ function selectSquare(squareId, shouldCenter = false) {
   selectedId = boundedId;
 
   if (squareInput) squareInput.value = String(boundedId + 1);
-  selectedLabel.textContent = `#${boundedId + 1}${claimed ? ` · ${claimed.label}` : ""}`;
+  if (selectedLabel) selectedLabel.textContent = `#${boundedId + 1}${claimed ? ` · ${claimed.label}` : ""}`;
   renderSelectedCard(claimed, boundedId);
 
   if (claimed) {
-    selectedLink.href = visitHref(boundedId);
-    selectedLink.hidden = false;
+    if (selectedLink) {
+      selectedLink.href = visitHref(boundedId);
+      selectedLink.hidden = false;
+    }
   } else {
-    selectedLink.hidden = true;
+    if (selectedLink) selectedLink.hidden = true;
   }
 
   if (shouldCenter) {
@@ -637,6 +637,7 @@ function selectSquare(squareId, shouldCenter = false) {
 }
 
 function renderSelectedCard(claimed, squareId) {
+  if (!selectedCard) return;
   const title = claimed ? claimed.label : "Open square";
   const packSize = selectedPackSize();
   const rarity = rarityFor(squareId, claimed);
@@ -1015,6 +1016,7 @@ function categoryCounts(squares) {
 
 function renderCategories() {
   const target = document.getElementById("topCategories");
+  if (!target) return;
   const categories = categoryCounts(allSquares).slice(0, 6);
 
   target.innerHTML = categories.length ? categories.map(({ category, count }) => `
@@ -1030,6 +1032,7 @@ function renderCategories() {
 
 function renderSquareList(id, squares, label, metric = (square) => `#${square.id + 1}`) {
   const target = document.getElementById(id);
+  if (!target) return;
 
   target.innerHTML = squares.length ? squares.map((square, index) => `
     <li>
@@ -1088,46 +1091,37 @@ function updateCheckoutButton() {
   }
   const previousListing = normalizedUrl ? allSquares.find((square) => square.url === normalizedUrl) : null;
   const previousBid = previousListing ? previousListing.featuredAmountCents / 100 : 0;
-  const monthly = promotionTypeInput?.value === "monthly";
-  const minimumBid = Math.max(1, highestBid + 1, previousBid + 1);
-  const monthlyAmount = Math.max(1, Math.min(10000, Number(paymentLevelInput?.value || 30)));
-  const currentLevel = monthly
-    ? previousBid + monthlyAmount
-    : Math.max(minimumBid, Math.min(10000, Number(paymentLevelInput?.value || minimumBid)));
-  const amountDue = monthly ? monthlyAmount : currentLevel - previousBid;
+  const amountDue = Math.max(1, Math.min(999999, Math.round(Number(paymentLevelInput?.value || 1))));
+  const currentLevel = previousBid + amountDue;
+  const amountToTop = Math.max(1, highestBid - previousBid + 1);
 
   if (paymentLevelInput) {
-    paymentLevelInput.min = String(monthly ? 1 : minimumBid);
-    paymentLevelInput.max = "10000";
-    paymentLevelInput.value = String(monthly ? monthlyAmount : currentLevel);
+    paymentLevelInput.min = "1";
+    paymentLevelInput.max = "999999";
+    paymentLevelInput.value = String(amountDue);
     paymentLevelInput.disabled = false;
   }
-  if (paymentLevelLabel) paymentLevelLabel.textContent = monthly ? "Monthly amount" : "One-time bid";
   if (placementPreview) {
-    placementPreview.textContent = monthly
-      ? `$${amountDue} is charged monthly until cancelled. Every successful renewal adds another $${amountDue} to your cumulative rank bid and extends placement by 30 days.`
-      : previousListing
-      ? `Your previous $${previousBid} bid is credited. Pay $${amountDue} to raise it to $${currentLevel} and return above the current $${highestBid} leader.`
-      : `$${currentLevel} puts you above the current $${highestBid} leader and includes ${amountDue} full day${amountDue === 1 ? "" : "s"} of featured time.`;
+    placementPreview.textContent = currentLevel > highestBid
+      ? `$${amountDue} puts ${previousListing ? "your total bid" : "you"} at $${currentLevel} — above the current $${highestBid} leader.`
+      : `$${amountDue} gets you listed with a $${currentLevel} total bid. Add $${amountToTop} to take #1 above the current $${highestBid} leader.`;
   }
   checkoutButton.disabled = false;
-  checkoutButton.textContent = monthly
-    ? `Start monthly · $${amountDue}/mo`
-    : previousListing
-    ? `Pay the $${amountDue} difference · reclaim #1 🚀`
-    : `Claim my spot · $${currentLevel}`;
+  checkoutButton.textContent = `Continue to Stripe · $${amountDue}`;
+  const takeTopButton = document.querySelector("[data-take-top]");
+  if (takeTopButton) takeTopButton.textContent = `Take #1 · $${amountToTop}`;
   renderSelectedCard(paidSquares.get(selectedId), selectedId);
   drawGrid();
 }
 
-function openClaimDialog() {
-  if (!claimDialog) return;
-  claimDialog.showModal();
+function focusClaimForm() {
+  if (!claimForm) return;
   trackFunnelEvent("claim_started", {
     square: String(selectedId + 1),
-    source: "claim_dialog",
+    source: "inline_claim",
   });
-  requestAnimationFrame(() => linkUrlInput?.focus());
+  document.getElementById("claimForm")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  linkUrlInput?.focus({ preventScroll: true });
 }
 
 canvas.addEventListener("click", (event) => {
@@ -1142,7 +1136,7 @@ canvas.addEventListener("click", (event) => {
     return;
   }
 
-  openClaimDialog();
+  focusClaimForm();
 });
 
 canvas.addEventListener("pointerdown", (event) => {
@@ -1231,6 +1225,9 @@ linkUrlInput?.addEventListener("input", () => {
   inferBrandFromUrl();
   updateCheckoutButton();
 });
+linkUrlInput?.addEventListener("focus", () => {
+  trackFunnelEvent("claim_started", { square: String(selectedId + 1), source: "inline_claim" });
+}, { once: true });
 companySearch.addEventListener("input", applyFilters);
 categoryFilter.addEventListener("change", () => {
   applyFilters();
@@ -1239,13 +1236,23 @@ categoryFilter.addEventListener("change", () => {
 listViewButton.addEventListener("click", () => setActiveView("list"));
 gridViewButton.addEventListener("click", () => setActiveView("grid"));
 mapViewButton.addEventListener("click", () => setActiveView("map"));
-document.querySelector("[data-focus-claim]")?.addEventListener("click", () => {
-  openClaimDialog();
-});
-document.querySelector("[data-open-claim]")?.addEventListener("click", openClaimDialog);
-document.querySelector("[data-close-claim]")?.addEventListener("click", () => claimDialog?.close());
-claimDialog?.addEventListener("click", (event) => {
-  if (event.target === claimDialog) claimDialog.close();
+document.querySelector("[data-focus-claim]")?.addEventListener("click", focusClaimForm);
+document.querySelectorAll("[data-adjust-bid]").forEach((button) => button.addEventListener("click", () => {
+  if (!paymentLevelInput) return;
+  paymentLevelInput.value = String(Math.max(1, Math.min(999999, Number(paymentLevelInput.value || 1) + Number(button.dataset.adjustBid || 0))));
+  updateCheckoutButton();
+}));
+document.querySelector("[data-take-top]")?.addEventListener("click", () => {
+  if (!paymentLevelInput) return;
+  const now = Date.now();
+  const highestBid = Math.max(0, ...allSquares.filter((square) => featureState(square, now) !== "none").map((square) => square.featuredAmountCents / 100));
+  let previousBid = 0;
+  try {
+    const normalizedUrl = new URL(linkUrlInput?.value || "").toString();
+    previousBid = allSquares.find((square) => square.url === normalizedUrl)?.featuredAmountCents / 100 || 0;
+  } catch {}
+  paymentLevelInput.value = String(Math.max(1, highestBid - previousBid + 1));
+  updateCheckoutButton();
 });
 claimForm?.addEventListener("submit", () => {
   trackFunnelEvent("checkout_started", {

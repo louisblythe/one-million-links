@@ -27,7 +27,33 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
           <p class="hero-kicker">Permanent listing. Live competition.</p>
           <h1>The link leaderboard. <em>The highest active bid takes #1.</em></h1>
           <p class="hero-subhead">No ads. No algorithms. Claim a permanent branded listing for $1, then promote it for as long as you choose. Every click lands on your site.</p>
-          <button class="hero-claim-button" type="button" data-open-claim>Claim #1 →</button>
+          <section class="inline-claim" id="claimForm" aria-labelledby="claim-form-title">
+            <h2 id="claim-form-title">Choose what you want to pay</h2>
+            <p>Pay from $1 for any available rank, or enter enough to take the top spot.</p>
+            <form action="/checkout" method="post">
+              <input id="label" name="label" type="hidden" value="Website">
+              <input name="category" type="hidden" value="Other">
+              <input name="promotion_type" type="hidden" value="bid">
+              <div class="bid-amount" aria-labelledby="bid-amount-label">
+                <span id="bid-amount-label">Your payment</span>
+                <div class="bid-stepper">
+                  <button type="button" data-adjust-bid="-1" aria-label="Subtract one dollar">−</button>
+                  <label class="bid-value" for="payment_level"><span aria-hidden="true">$</span><input id="payment_level" name="payment_level" type="number" min="1" max="999999" step="1" value="1" inputmode="numeric" required aria-describedby="placementPreview"></label>
+                  <button type="button" data-adjust-bid="1" aria-label="Add one dollar">+</button>
+                </div>
+                <div class="bid-increments" aria-label="Adjust payment amount">
+                  <button type="button" data-adjust-bid="-10">−$10</button>
+                  <button type="button" data-adjust-bid="-5">−$5</button>
+                  <button type="button" data-adjust-bid="5">+$5</button>
+                  <button type="button" data-adjust-bid="10">+$10</button>
+                  <button class="take-top-button" type="button" data-take-top>Take #1</button>
+                </div>
+              </div>
+              <label class="website-input" for="url"><span class="sr-only">Your website</span><input id="url" name="url" type="url" placeholder="https://yourwebsite.com" autocomplete="url" required></label>
+              <p id="placementPreview" class="placement-preview" aria-live="polite">$1 gets your website listed. The current #1 amount will appear here.</p>
+              <button id="checkoutButton" type="submit">Continue to Stripe · $1</button>
+            </form>
+          </section>
         </div>
         <div class="stats live-stats" aria-label="Live site activity" aria-live="polite">
           <span class="live-stats__status"><i aria-hidden="true"></i><strong id="activeNow">—</strong> active now</span>
@@ -119,127 +145,6 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
           <div class="hover-preview" id="hoverPreview" hidden></div>
         </div>
 
-        <dialog class="claim-dialog" id="claimDialog" aria-labelledby="claim-dialog-title">
-          <button class="claim-dialog__close" type="button" data-close-claim aria-label="Close claim form">×</button>
-        <aside class="claim-panel">
-          <div class="claim-copy">
-            <p class="eyebrow">Featured placement</p>
-            <h2 id="claim-dialog-title">Claim #1 for as long as you choose</h2>
-            <ul class="claim-benefits">
-              <li>Your listing stays permanently</li>
-              <li>Bid for rank without choosing a square</li>
-              <li>Choose a one-time bid or a recurring monthly rank boost</li>
-            </ul>
-            <p class="rebid-note"><strong>Outbid or be outbid.</strong> Enter the same URL again and your previous bid is credited. We automatically calculate the amount needed to return to #1.</p>
-          </div>
-
-          <form action="/checkout" method="post">
-            <div class="field-row">
-              <label for="label">Friendly title</label>
-              <input id="label" name="label" maxlength="80" placeholder="What should we call you?" required>
-            </div>
-            <div class="field-row">
-              <label for="url">Your website</label>
-              <input id="url" name="url" type="url" placeholder="https://yourwebsite.com" required>
-            </div>
-            <div class="field-row logo-field">
-              <label for="logo_url">Logo URL <span>(optional)</span></label>
-              <input id="logo_url" name="logo_url" type="url" maxlength="500" placeholder="https://yourwebsite.com/logo.png">
-            </div>
-            <div class="field-row">
-              <label for="country">Country <span>(optional)</span></label>
-              <input id="country" name="country" maxlength="80" autocomplete="country-name" placeholder="Australia">
-              <small>Used only to place your listing at the country centre on the public map.</small>
-            </div>
-            <div class="field-row description-field">
-              <label for="description">Friendly description <span>(optional)</span></label>
-              <textarea id="description" name="description" maxlength="180" rows="2" placeholder="A short, human introduction to what you do"></textarea>
-            </div>
-            <div class="field-row">
-              <label for="category">Category</label>
-              <select id="category" name="category">
-                <option>AI</option>
-                <option>SaaS</option>
-                <option>Ecommerce</option>
-                <option>Agency</option>
-                <option>Media</option>
-                <option>Developer tools</option>
-                <option>Finance</option>
-                <option>Local business</option>
-                <option selected>Other</option>
-              </select>
-            </div>
-            <div class="field-row">
-              <label for="promotion_type">Placement</label>
-              <select id="promotion_type" name="promotion_type">
-                <option value="bid">Custom rank bid</option>
-                <option value="monthly">Recurring monthly bid</option>
-              </select>
-            </div>
-            <div class="field-row payment-level-field">
-              <label for="payment_level">Promotion amount</label>
-              <div class="money-input">
-                <span aria-hidden="true">$</span>
-                <input id="payment_level" name="payment_level" type="number" min="1" max="10000" step="1" value="1" required aria-describedby="placementPreview">
-              </div>
-              <small id="placementPreview">Your first $1 publishes the listing permanently. Additional dollars buy more time at #1.</small>
-            </div>
-            <div class="field-row">
-              <label for="email">Ownership receipt</label>
-              <input id="email" name="email" type="email" placeholder="you@example.com">
-            </div>
-            <div class="field-row">
-              <label for="anchor_text">Anchor text</label>
-              <input id="anchor_text" name="anchor_text" maxlength="80" placeholder="Primary search phrase">
-            </div>
-            <div class="field-row">
-              <label for="link_attribute">Link attribute</label>
-              <select id="link_attribute" name="link_attribute">
-                <option value="sponsored" selected>Sponsored public link</option>
-                <option value="nofollow">Nofollow public link</option>
-              </select>
-            </div>
-            <p class="auto-brand-note">We’ll suggest a title from your website. Add your own logo and a short introduction to make the listing feel like you.</p>
-            <button id="checkoutButton" type="submit">Claim my spot</button>
-          </form>
-
-          <div class="selection" hidden>
-            <span>Listing</span>
-            <strong id="selectedLabel">Ready</strong>
-            <a id="selectedLink" href="#" target="_blank" rel="noopener">Open claimed link</a>
-            <div class="selected-card" id="selectedCard"></div>
-          </div>
-
-          <div class="proof-panel" aria-labelledby="featured-title">
-            <p class="eyebrow">Leaderboard</p>
-            <h2 id="featured-title">Top performing</h2>
-            <div class="proof-group">
-              <ul id="featuredSquares" class="proof-list"></ul>
-            </div>
-          </div>
-
-          <div class="proof-panel" aria-labelledby="proof-title">
-            <p class="eyebrow">Live board</p>
-            <h2 id="proof-title">Activity and rankings</h2>
-            <div class="proof-group">
-              <h3>Notable brands</h3>
-              <ul id="notableBrands" class="proof-list"></ul>
-            </div>
-            <div class="proof-group">
-              <h3>Recently claimed</h3>
-              <ul id="newestSquares" class="proof-list"></ul>
-            </div>
-            <div class="proof-group">
-              <h3>Top categories</h3>
-              <ul id="topCategories" class="proof-list compact"></ul>
-            </div>
-            <div class="proof-group">
-              <h3>Leaderboards</h3>
-              <ul id="mostClicked" class="proof-list"></ul>
-            </div>
-          </div>
-        </aside>
-        </dialog>
       </section>
 
       <section class="trending-section" aria-labelledby="trending-title">

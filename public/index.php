@@ -158,15 +158,13 @@ try {
         $email = filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null;
         $rebid = rebid_context($url);
         $previousBid = intdiv((int) $rebid['previous_cents'], 100);
-        $highestBid = intdiv((int) $rebid['highest_cents'], 100);
-        $minimumBid = max(1, $highestBid + 1, $previousBid + 1);
         $monthlyAmount = $promotionType === 'monthly'
             ? normalize_payment_level($_POST['payment_level'] ?? 30, 1)
             : 0;
-        $paymentLevel = $promotionType === 'monthly'
-            ? $previousBid + $monthlyAmount
-            : normalize_payment_level($_POST['payment_level'] ?? $minimumBid, $minimumBid);
-        $amountDue = $promotionType === 'monthly' ? $monthlyAmount : $paymentLevel - $previousBid;
+        $amountDue = $promotionType === 'monthly'
+            ? $monthlyAmount
+            : normalize_payment_level($_POST['payment_level'] ?? 1, 1);
+        $paymentLevel = $previousBid + $amountDue;
         $featuredDays = $promotionType === 'monthly' ? 30 : $amountDue;
         $purchaseLocation = country_location((string) ($_POST['country'] ?? ''));
         $isNewListing = $rebid['square_ids'] === [];

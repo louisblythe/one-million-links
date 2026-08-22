@@ -6,8 +6,7 @@ test("mobile discovery and claim flow remain usable without horizontal overflow"
   const viewport = page.viewportSize();
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(width).toBeLessThanOrEqual(viewport.width + 1);
-  await page.getByRole("button", { name: /Claim #1/ }).click();
-  await expect(page.locator("#claimDialog")).toBeVisible();
+  await expect(page.locator("#claimForm")).toBeVisible();
   await page.locator("#url").fill("https://mobile-flow.example/");
   await expect(page.locator("#label")).toHaveValue("Mobile Flow");
   await expect(page.locator("#checkoutButton")).toBeEnabled();

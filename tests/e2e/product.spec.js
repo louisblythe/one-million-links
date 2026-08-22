@@ -56,17 +56,15 @@ test.describe("public discovery", () => {
     expect(bytes.readUInt32BE(20)).toBe(630);
   });
 
-  test("claim dialog validates, prices, closes, and reopens", async ({ page }) => {
+  test("inline claim form accepts any payment and calculates the top bid", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: /Claim #1/ }).click();
-    await expect(page.locator("#claimDialog")).toBeVisible();
+    await expect(page.locator("#claimForm")).toBeVisible();
     await page.locator("#url").fill("https://new-company.example/");
     await expect(page.locator("#label")).toHaveValue("New Company");
-    const minimumBid = Number(await page.locator("#payment_level").getAttribute("min"));
-    expect(minimumBid).toBeGreaterThanOrEqual(1);
-    await expect(page.locator("#checkoutButton")).toContainText(`$${minimumBid}`);
-    await page.getByRole("button", { name: "Close claim form" }).click();
-    await expect(page.locator("#claimDialog")).not.toBeVisible();
+    await page.locator("#payment_level").fill("1");
+    await expect(page.locator("#checkoutButton")).toContainText("$1");
+    await page.getByRole("button", { name: /Take #1/ }).click();
+    await expect(page.locator("#placementPreview")).toContainText("above the current");
   });
 
   test("new purchase completes through the deterministic local Stripe seam", async ({ page }) => {
@@ -78,7 +76,7 @@ test.describe("public discovery", () => {
     const square = 900000 + Math.floor(Date.now() % 90000);
     const label = `Brand ${square}`;
     await page.goto(`/?square=${square}`);
-    await page.getByRole("button", { name: /Claim #1/ }).click();
+    await page.locator("#url").focus();
     await expect.poll(() => page.evaluate(() => window.__PIQO_EVENTS__?.some((event) => event[0] === "claim_started"))).toBeTruthy();
     await page.locator("#url").fill(`https://brand-${square}.example/`);
     await expect(page.locator("#label")).toHaveValue(label);

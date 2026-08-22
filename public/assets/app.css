@@ -2800,6 +2800,164 @@ body[data-directory-mode="true"] .hero-copy {
   gap: 10px;
 }
 
+body[data-directory-mode="true"] .inline-claim {
+  width: min(620px, 100%);
+  margin-top: 10px;
+  padding: 22px;
+  border: 1px solid #dbe5e1;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(16, 37, 31, 0.08);
+  text-align: left;
+}
+
+body[data-directory-mode="true"] .inline-claim h2 {
+  margin: 0;
+  color: #10251f;
+  font-size: 1.15rem;
+  line-height: 1.2;
+  text-align: center;
+}
+
+body[data-directory-mode="true"] .inline-claim > p {
+  margin: 5px 0 18px;
+  color: #5a6b65;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+body[data-directory-mode="true"] .inline-claim form {
+  display: grid;
+  gap: 12px;
+}
+
+body[data-directory-mode="true"] .bid-amount {
+  display: grid;
+  gap: 8px;
+}
+
+body[data-directory-mode="true"] #bid-amount-label {
+  color: #52635d;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+body[data-directory-mode="true"] .bid-stepper {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  min-height: 58px;
+  overflow: hidden;
+  border: 1px solid #cedbd6;
+  border-radius: 14px;
+}
+
+body[data-directory-mode="true"] .bid-stepper button {
+  border: 0;
+  border-radius: 0;
+  background: #f4f7f6;
+  color: #10251f;
+  font-size: 1.25rem;
+}
+
+body[data-directory-mode="true"] .bid-stepper button:first-child {
+  border-right: 1px solid #cedbd6;
+}
+
+body[data-directory-mode="true"] .bid-stepper button:last-child {
+  border-left: 1px solid #cedbd6;
+}
+
+body[data-directory-mode="true"] .bid-value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #10251f;
+  font-size: 1.75rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+body[data-directory-mode="true"] .bid-value input {
+  width: min(8ch, 70%);
+  min-height: 54px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+}
+
+body[data-directory-mode="true"] .bid-value input::-webkit-inner-spin-button,
+body[data-directory-mode="true"] .bid-value input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+body[data-directory-mode="true"] .bid-increments {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(108px, 1.35fr);
+  gap: 7px;
+}
+
+body[data-directory-mode="true"] .bid-increments button {
+  min-height: 38px;
+  padding: 6px 9px;
+  border: 1px solid #cedbd6;
+  border-radius: 9px;
+  background: #fff;
+  color: #344740;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+body[data-directory-mode="true"] .bid-increments .take-top-button {
+  border-color: #177e6d;
+  background: #edf7f4;
+  color: #11695b;
+}
+
+body[data-directory-mode="true"] .website-input input {
+  width: 100%;
+  min-height: 50px;
+  padding: 0 15px;
+  border: 1px solid #cedbd6;
+  border-radius: 12px;
+  background: #fff;
+  color: #10251f;
+  font-size: 0.94rem;
+}
+
+body[data-directory-mode="true"] .bid-stepper:focus-within,
+body[data-directory-mode="true"] .website-input input:focus {
+  border-color: #177e6d;
+  box-shadow: 0 0 0 3px rgba(23, 126, 109, 0.14);
+  outline: 0;
+}
+
+body[data-directory-mode="true"] .placement-preview {
+  margin: -2px 0 0;
+  color: #5a6b65;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+body[data-directory-mode="true"] .inline-claim #checkoutButton {
+  min-height: 50px;
+  border: 0;
+  border-radius: 12px;
+  background: #177e6d;
+  color: #fff;
+  font-weight: 800;
+}
+
+body[data-directory-mode="true"] .inline-claim #checkoutButton:hover {
+  background: #11695b;
+}
+
 body[data-directory-mode="true"] h1 {
   max-width: 720px;
   font-size: clamp(2.25rem, 5.2vw, 4.15rem);
@@ -2913,6 +3071,19 @@ body[data-directory-mode="true"] .auto-brand-note {
     max-width: 34ch;
     font-size: 0.84rem;
     line-height: 1.4;
+  }
+
+  body[data-directory-mode="true"] .inline-claim {
+    padding: 17px 14px;
+    border-radius: 15px;
+  }
+
+  body[data-directory-mode="true"] .bid-increments {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  body[data-directory-mode="true"] .bid-increments .take-top-button {
+    grid-column: 1 / -1;
   }
 
   body[data-directory-mode="true"] .claim-panel {
