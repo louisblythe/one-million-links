@@ -5,7 +5,7 @@ const STRIPE_API_VERSION = "2026-06-24.dahlia";
 const PUBLIC_HTML_CACHE = "public, max-age=300, s-maxage=600, stale-while-revalidate=86400";
 const ASSET_CACHE = "public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800";
 const VERSIONED_ASSET_CACHE = "public, max-age=31536000, s-maxage=31536000, immutable";
-const ASSET_VERSION = "20260822-modal";
+const ASSET_VERSION = "20260822-stats";
 const DATAFAST_WEBSITE_ID = "dfid_covNyYU25Nl5a20HXqsd3";
 const DATAFAST_DOMAIN = "linkforadollar.com";
 const CATEGORIES = ["AI", "SaaS", "Ecommerce", "Agency", "Media", "Developer tools", "Finance", "Local business", "Other"];
@@ -1428,6 +1428,26 @@ function statsPage(squares, env) {
                 <span>${formatNumber(category.click_count)} clicks</span>
                 <strong>${formatNumber(category.square_count)} squares</strong>
               </li>`).join("") || emptyRankRow();
+  const maxClicks = Math.max(1, ...stats.topPerforming.map((square) => Number(square.click_count || 0)));
+  const maxCategoryCount = Math.max(1, ...stats.categories.map((category) => Number(category.square_count || 0)));
+  const clickChartRows = stats.topPerforming.slice(0, 8).map((square) => {
+    const clicks = Number(square.click_count || 0);
+    const size = clicks > 0 ? Math.max(5, Math.round((clicks / maxClicks) * 100)) : 0;
+    return `<li>
+                <a href="${squareHref(square)}">${escapeHtml(square.label)}</a>
+                <span class="stats-chart__track" aria-hidden="true"><i style="--bar-size:${size}%"></i></span>
+                <strong>${formatNumber(clicks)}</strong>
+              </li>`;
+  }).join("") || emptyChartRow("No outbound clicks yet");
+  const categoryChartRows = stats.categories.slice(0, 8).map((category) => {
+    const count = Number(category.square_count || 0);
+    const size = count > 0 ? Math.max(5, Math.round((count / maxCategoryCount) * 100)) : 0;
+    return `<li>
+                <a href="/collections/${encodeURIComponent(category.category)}">${escapeHtml(category.category)}</a>
+                <span class="stats-chart__track" aria-hidden="true"><i style="--bar-size:${size}%"></i></span>
+                <strong>${formatNumber(count)}</strong>
+              </li>`;
+  }).join("") || emptyChartRow("No categories yet");
 
   return `<!doctype html>
 <html lang="en">
@@ -1449,15 +1469,15 @@ function statsPage(squares, env) {
     })}
     <style>${trafficStyles()}</style>
   </head>
-  <body>
+  <body data-stats-mode="true">
     ${siteHeader()}
     <main class="page-shell stats-page">
       ${breadcrumbs(crumbs)}
       <header class="stats-hero">
         <div>
-          <p class="eyebrow">Stats</p>
-          <h1>Leaderboard</h1>
-          <p>The public scoreboard for traffic, territory, recency, and founding claims.</p>
+          <p class="eyebrow">Live board data</p>
+          <h1>Every claim.<br><span>Clearly measured.</span></h1>
+          <p>See which permanent listings are earning attention and how the board is growing.</p>
           <nav class="leaderboard-nav" aria-label="Leaderboard pages">
             <a class="button-link secondary" href="/leaderboards/most-clicked">Most clicked</a>
             <a class="button-link secondary" href="/leaderboards/founding-squares">Founding squares</a>
@@ -1465,26 +1485,39 @@ function statsPage(squares, env) {
             <a class="button-link secondary" href="/leaderboards/largest-territories">Largest territories</a>
           </nav>
         </div>
-        <a class="button-link secondary" href="/">Back to the grid</a>
+        <a class="button-link" href="/">Explore the leaderboard</a>
       </header>
 
       <section class="stats-summary" aria-label="Board summary">
-        <div><span>Claimed squares</span><strong>${formatNumber(summary.claimed)}</strong></div>
-        <div><span>Owners</span><strong>${formatNumber(summary.owners)}</strong></div>
-        <div><span>Territories</span><strong>${formatNumber(summary.territories)}</strong></div>
-        <div><span>Total clicks</span><strong>${formatNumber(summary.clicks)}</strong></div>
+        <div><span>Live listings</span><strong>${formatNumber(summary.claimed)}</strong><small>Permanent spots claimed</small></div>
+        <div><span>Brands</span><strong>${formatNumber(summary.owners)}</strong><small>Unique sites represented</small></div>
+        <div><span>Claim groups</span><strong>${formatNumber(summary.territories)}</strong><small>Individual and multi-spot claims</small></div>
+        <div><span>Outbound clicks</span><strong>${formatNumber(summary.clicks)}</strong><small>Visits sent to listed sites</small></div>
+      </section>
+
+      <section class="stats-charts" aria-label="Board charts">
+        <figure class="stats-board stats-chart">
+          <figcaption>
+            <p class="eyebrow">Traffic</p>
+            <h2>Clicks by listing</h2>
+            <p>Tracked visits sent from the board. Longer bars mean more visitors reached that site.</p>
+          </figcaption>
+          <ol class="stats-chart__rows" aria-label="Outbound clicks by listing">${clickChartRows}</ol>
+          <div class="stats-chart__axis" aria-hidden="true"><span>0</span><span>${formatNumber(maxClicks)} clicks</span></div>
+        </figure>
+
+        <figure class="stats-board stats-chart">
+          <figcaption>
+            <p class="eyebrow">Board mix</p>
+            <h2>Listings by category</h2>
+            <p>How the claimed listings are distributed. Each value is the number of permanent spots.</p>
+          </figcaption>
+          <ol class="stats-chart__rows" aria-label="Listings by category">${categoryChartRows}</ol>
+          <div class="stats-chart__axis" aria-hidden="true"><span>0</span><span>${formatNumber(maxCategoryCount)} listings</span></div>
+        </figure>
       </section>
 
       <section class="stats-grid" aria-label="Rankings">
-        <article class="stats-board">
-          <p class="eyebrow">Leaderboard</p>
-          <h2>Top Performing</h2>
-          <ol class="rank-list">${squareRows(stats.topPerforming, {
-            meta: (square) => hostFromUrl(square.url),
-            value: (square) => `${formatNumber(Number(square.click_count || 0))} clicks`,
-          })}</ol>
-        </article>
-
         <article class="stats-board">
           <p class="eyebrow">Territory</p>
           <h2>Top Landholders</h2>
@@ -1509,7 +1542,7 @@ function statsPage(squares, env) {
           })}</ol>
         </article>
 
-        <article class="stats-board stats-board--wide">
+        <article class="stats-board">
           <p class="eyebrow">Categories</p>
           <h2>Category Leaders</h2>
           <ol class="rank-list category-rank-list">${categoryRows}</ol>
@@ -1587,6 +1620,10 @@ function statsPageData(squares) {
 
 function emptyRankRow() {
   return '<li><a href="/">Claim the first square</a><span>Open board</span><strong>$1</strong></li>';
+}
+
+function emptyChartRow(label) {
+  return `<li class="stats-chart__empty"><a href="/">${escapeHtml(label)} — claim the first listing</a></li>`;
 }
 
 function formatNumber(value) {
