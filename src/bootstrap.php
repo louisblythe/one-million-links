@@ -101,6 +101,8 @@ function db(): PDO
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_squares_featured_until ON squares(featured_until)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_squares_featured_amount ON squares(featured_amount_cents)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_squares_purchase_country ON squares(purchase_country)');
+    $pdo->exec('CREATE TABLE IF NOT EXISTS visitor_presence (session_id TEXT PRIMARY KEY, first_seen TEXT NOT NULL, last_seen TEXT NOT NULL)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_visitor_presence_last_seen ON visitor_presence(last_seen)');
 
     return $pdo;
 }
@@ -200,7 +202,7 @@ function seo_head(string $title, string $description, ?string $path = '/', strin
         . '<link rel="icon" href="/favicon.svg" type="image/svg+xml">' . PHP_EOL
         . '<link rel="apple-touch-icon" href="/apple-touch-icon.png">' . PHP_EOL
         . '<link rel="manifest" href="/site.webmanifest">' . PHP_EOL
-        . '<link rel="stylesheet" href="/assets/app.css?v=20260822-form-details">' . PHP_EOL
+        . '<link rel="stylesheet" href="/assets/app.css?v=20260822-checkout">' . PHP_EOL
         . datafast_analytics_script();
 }
 
@@ -683,6 +685,22 @@ function record_square_click(int $squareId): void
 {
     $stmt = db()->prepare('UPDATE squares SET click_count = click_count + 1 WHERE square_id = :square_id AND status = "paid"');
     $stmt->execute(['square_id' => $squareId]);
+}
+
+function record_presence(string $sessionId): array
+{
+    if (!preg_match('/^[a-f0-9-]{36}$/i', $sessionId)) {
+        throw new InvalidArgumentException('A valid presence session is required.');
+    }
+
+    $database = db();
+    $now = gmdate('Y-m-d H:i:s');
+    $statement = $database->prepare('INSERT INTO visitor_presence (session_id, first_seen, last_seen) VALUES (:session_id, :first_seen, :last_seen) ON CONFLICT(session_id) DO UPDATE SET last_seen = excluded.last_seen');
+    $statement->execute(['session_id' => $sessionId, 'first_seen' => $now, 'last_seen' => $now]);
+    $database->exec("DELETE FROM visitor_presence WHERE last_seen < datetime('now', '-2 days')");
+    $stats = $database->query("SELECT SUM(CASE WHEN last_seen >= datetime('now', '-5 minutes') THEN 1 ELSE 0 END) AS active_now, SUM(CASE WHEN last_seen >= datetime('now', '-24 hours') THEN 1 ELSE 0 END) AS sessions_24h FROM visitor_presence")->fetch(PDO::FETCH_ASSOC);
+
+    return ['active_now' => (int) ($stats['active_now'] ?? 0), 'sessions_24h' => (int) ($stats['sessions_24h'] ?? 0), 'measured_at' => gmdate(DATE_ATOM)];
 }
 
 load_env(__DIR__ . '/../.env');

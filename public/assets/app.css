@@ -670,16 +670,40 @@ body[data-directory-mode="true"] .stats {
 }
 
 body[data-directory-mode="true"] .stats::before {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: #71c69b;
-  content: "";
+  content: none;
 }
 
 body[data-directory-mode="true"] .stats strong {
   font-size: 0.88rem;
   font-variant-numeric: tabular-nums;
+}
+
+body[data-directory-mode="true"] .live-stats__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #285f4d;
+}
+
+body[data-directory-mode="true"] .live-stats__status i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #4ca879;
+}
+
+body[data-directory-mode="true"] .live-stats__divider {
+  color: var(--line);
+}
+
+body[data-directory-mode="true"] .live-stats.is-stale .live-stats__status,
+body[data-directory-mode="true"] .live-stats.is-stale span {
+  color: var(--muted);
+}
+
+body[data-directory-mode="true"] .live-stats.is-stale .live-stats__status i {
+  background: var(--line);
 }
 
 body[data-directory-mode="true"] .stats span,
@@ -2464,6 +2488,52 @@ body[data-directory-mode="true"] .claim-panel form .field-row:has(#description) 
   body[data-directory-mode="true"] .claim-panel form .field-row:has(#description),
   body[data-directory-mode="true"] .claim-panel form .field-row:has(#payment_level) {
     grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  body[data-stats-mode="true"] .stats-page {
+    gap: 14px;
+  }
+
+  body[data-stats-mode="true"] .stats-hero {
+    align-items: stretch;
+    padding: 26px 22px;
+    border-radius: 18px;
+  }
+
+  body[data-stats-mode="true"] .stats-hero h1 {
+    font-size: clamp(2.25rem, 12vw, 3.25rem);
+  }
+
+  body[data-stats-mode="true"] .stats-hero .button-link {
+    align-self: start;
+  }
+
+  body[data-stats-mode="true"] .leaderboard-nav {
+    display: none;
+  }
+
+  body[data-stats-mode="true"] .stats-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body[data-stats-mode="true"] .stats-summary div,
+  body[data-stats-mode="true"] .stats-board {
+    padding: 17px;
+  }
+
+  .stats-charts {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-chart__rows li {
+    grid-template-columns: minmax(82px, 0.7fr) minmax(80px, 1.4fr) 34px;
+    gap: 8px;
+  }
+
+  .stats-chart__axis {
+    display: none;
   }
 }
 

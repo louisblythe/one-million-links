@@ -41,6 +41,13 @@ try {
         json_response(['squares' => paid_squares()]);
     }
 
+    if ($method === 'POST' && $path === '/api/presence') {
+        header('Cache-Control: no-store');
+        header('X-Robots-Tag: noindex, follow');
+        $body = json_decode((string) file_get_contents('php://input'), true) ?: [];
+        json_response(record_presence((string) ($body['session_id'] ?? '')));
+    }
+
     if ($method === 'GET' && $path === '/robots.txt') {
         header('Content-Type: text/plain; charset=utf-8');
         echo "User-agent: *\n";

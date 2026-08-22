@@ -23,7 +23,9 @@ const squareInput = document.getElementById("square_id");
 const selectedLabel = document.getElementById("selectedLabel");
 const selectedLink = document.getElementById("selectedLink");
 const selectedCard = document.getElementById("selectedCard");
-const claimedCount = document.getElementById("claimedCount");
+const activeNow = document.getElementById("activeNow");
+const sessions24h = document.getElementById("sessions24h");
+const presenceStatus = document.getElementById("presenceStatus");
 const hoverPreview = document.getElementById("hoverPreview");
 const zoomRange = document.getElementById("zoomRange");
 const zoomOut = document.getElementById("zoomOut");
@@ -1208,5 +1210,31 @@ if (allSquares.length > 0 && initialSelection <= 0) {
   focusFeaturedBlock();
 }
 selectSquare(initialSelection, allSquares.length === 0 || initialSelection > 0);
-claimedCount.textContent = String(paidSquares.size);
 updateCheckoutButton();
+
+async function refreshPresence() {
+  if (!activeNow || !sessions24h || document.hidden) return;
+  const sessionId = sessionStorage.getItem("linkforadollar:presence") || crypto.randomUUID();
+  sessionStorage.setItem("linkforadollar:presence", sessionId);
+  try {
+    const response = await fetch("/api/presence", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ session_id: sessionId }),
+      cache: "no-store",
+    });
+    if (!response.ok) throw new Error("Presence unavailable");
+    const stats = await response.json();
+    activeNow.textContent = new Intl.NumberFormat().format(stats.active_now);
+    sessions24h.textContent = new Intl.NumberFormat().format(stats.sessions_24h);
+    presenceStatus.textContent = "Live activity updated";
+    document.querySelector(".live-stats")?.classList.remove("is-stale");
+  } catch {
+    presenceStatus.textContent = "Live activity temporarily unavailable";
+    document.querySelector(".live-stats")?.classList.add("is-stale");
+  }
+}
+
+refreshPresence();
+setInterval(refreshPresence, 60_000);
+document.addEventListener("visibilitychange", refreshPresence);

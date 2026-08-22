@@ -29,9 +29,11 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
           <p class="hero-subhead">No ads. No algorithms. Claim a permanent branded listing for $1, then promote it for as long as you choose. Every click lands on your site.</p>
           <button class="hero-claim-button" type="button" data-open-claim>Claim #1 →</button>
         </div>
-        <div class="stats">
-          <strong id="claimedCount"><?= count($paidSquares) ?></strong>
-          <span>claimed</span>
+        <div class="stats live-stats" aria-label="Live site activity" aria-live="polite">
+          <span class="live-stats__status"><i aria-hidden="true"></i><strong id="activeNow">—</strong> active now</span>
+          <span class="live-stats__divider" aria-hidden="true">·</span>
+          <span><strong id="sessions24h">—</strong> sessions in 24h</span>
+          <span class="sr-only" id="presenceStatus">Loading live activity</span>
           <a href="/stats">Stats</a>
         </div>
       </section>
@@ -290,6 +292,6 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
       window.__PAID_SQUARES__ = <?= $squaresJson ?>;
     </script>
     <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js" defer></script>
-    <script src="/assets/app.js?v=20260822-form-details" defer></script>
+    <script src="/assets/app.js?v=20260822-checkout" defer></script>
   </body>
 </html>
