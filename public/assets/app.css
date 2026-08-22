@@ -936,8 +936,50 @@ body[data-directory-mode="true"] .directory-row {
 }
 
 body[data-directory-mode="true"] .directory-row:nth-child(1) {
+  position: relative;
+  overflow: hidden;
   border-color: #e8c86c;
   background: #fff1be;
+}
+
+body[data-directory-mode="true"] .directory-row.is-top-ranked::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 28%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.58), transparent);
+  pointer-events: none;
+  transform: translateX(-220%);
+  animation: top-rank-shimmer 3.2s ease-out infinite;
+}
+
+body[data-directory-mode="true"] .directory-row.is-top-ranked > * {
+  position: relative;
+  z-index: 2;
+}
+
+body[data-directory-mode="true"] .directory-row__crow {
+  display: inline-block;
+  margin-left: 3px;
+  font-size: 1.08em;
+  line-height: 1;
+  vertical-align: -0.08em;
+}
+
+@keyframes top-rank-shimmer {
+  0%, 58% {
+    transform: translateX(-220%);
+  }
+  88%, 100% {
+    transform: translateX(460%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-directory-mode="true"] .directory-row.is-top-ranked::after {
+    animation: none;
+  }
 }
 
 body[data-directory-mode="true"] .directory-row.is-featured {

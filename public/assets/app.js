@@ -923,8 +923,8 @@ function renderDirectory() {
   directoryCount.textContent = `${ranked.length.toLocaleString()} claimed link${ranked.length === 1 ? "" : "s"}`;
 
   directoryRows.innerHTML = ranked.length ? ranked.map((square, index) => `
-    <li class="directory-row${featureState(square, now) === "active" ? " is-featured" : ""}">
-      <span class="directory-row__rank" aria-label="Rank ${index + 1}">#${index + 1}</span>
+    <li class="directory-row${featureState(square, now) === "active" ? " is-featured" : ""}${index === 0 ? " is-top-ranked" : ""}">
+      <span class="directory-row__rank" aria-label="Rank ${index + 1}">#${index + 1}${index === 0 ? ' <span class="directory-row__crow" aria-hidden="true">🐦‍⬛</span>' : ""}</span>
       ${brandMark(square)}
       <span class="directory-row__identity">
         <strong><a href="/squares/${square.id + 1}">${escapeHtml(square.label)}</a></strong>
