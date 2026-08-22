@@ -272,6 +272,12 @@ try {
         json_response(['error' => $e->getMessage()], 400);
     }
 
+    if ($path === '/checkout' && $e->getMessage() === 'One or more squares in that expansion pack have already been claimed.') {
+        http_response_code(409);
+        header('X-Robots-Tag: noindex, follow');
+        render('error', ['message' => 'That territory was claimed before checkout started. Go back and choose another homepage spot or a smaller expansion.']);
+    }
+
     http_response_code(500);
     header('X-Robots-Tag: noindex, follow');
     render('error', ['message' => $e->getMessage()]);

@@ -1044,6 +1044,8 @@ function updateCheckoutButton() {
     normalizedUrl = "";
   }
   const previousListing = normalizedUrl ? allSquares.find((square) => square.url === normalizedUrl) : null;
+  const unavailableSquareIds = adjacentIds(selectedId, packSize).filter((squareId) => paidSquares.has(squareId));
+  const packIsAvailable = previousListing || unavailableSquareIds.length === 0;
   const previousBid = previousListing ? previousListing.featuredAmountCents / 100 : 0;
   const minimumBid = Math.max(packSize, highestBid + 1, previousBid + 1);
   const currentLevel = Math.max(minimumBid, Math.min(10000, Number(paymentLevelInput?.value || minimumBid)));
@@ -1055,11 +1057,16 @@ function updateCheckoutButton() {
     paymentLevelInput.value = String(currentLevel);
   }
   if (placementPreview) {
-    placementPreview.textContent = previousListing
+    placementPreview.textContent = !packIsAvailable
+      ? `${unavailableSquareIds.length} square${unavailableSquareIds.length === 1 ? " is" : "s are"} already claimed in this territory. Choose another homepage spot or a smaller expansion.`
+      : previousListing
       ? `Your previous $${previousBid} bid is credited. Pay $${amountDue} to raise it to $${currentLevel} and return above the current $${highestBid} leader.`
       : `$${currentLevel} puts you above the current $${highestBid} leader and includes ${amountDue} full day${amountDue === 1 ? "" : "s"} of featured time${packSize > 1 ? ` plus ${packSize} connected squares` : ""}.`;
   }
-  checkoutButton.textContent = previousListing
+  checkoutButton.disabled = !packIsAvailable;
+  checkoutButton.textContent = !packIsAvailable
+    ? "Choose an available territory"
+    : previousListing
     ? `Pay the $${amountDue} difference · reclaim #1 🚀`
     : `Bid $${currentLevel} · claim #1`;
   renderSelectedCard(paidSquares.get(selectedId), selectedId);
