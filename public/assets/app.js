@@ -37,6 +37,7 @@ const categoryFilter = document.getElementById("categoryFilter");
 const packSizeInput = document.getElementById("pack_size");
 const promotionTypeInput = document.getElementById("promotion_type");
 const paymentLevelInput = document.getElementById("payment_level");
+const paymentLevelLabel = document.querySelector('label[for="payment_level"]');
 const linkUrlInput = document.getElementById("url");
 const labelInput = document.getElementById("label");
 const placementPreview = document.getElementById("placementPreview");
@@ -1048,28 +1049,29 @@ function updateCheckoutButton() {
   const previousBid = previousListing ? previousListing.featuredAmountCents / 100 : 0;
   const monthly = promotionTypeInput?.value === "monthly";
   const minimumBid = Math.max(1, highestBid + 1, previousBid + 1);
-  const monthlyLevel = Math.max(highestBid + 1, previousBid + 30);
+  const monthlyAmount = Math.max(1, Math.min(10000, Number(paymentLevelInput?.value || 30)));
   const currentLevel = monthly
-    ? monthlyLevel
+    ? previousBid + monthlyAmount
     : Math.max(minimumBid, Math.min(10000, Number(paymentLevelInput?.value || minimumBid)));
-  const amountDue = currentLevel - previousBid;
+  const amountDue = monthly ? monthlyAmount : currentLevel - previousBid;
 
   if (paymentLevelInput) {
-    paymentLevelInput.min = String(minimumBid);
+    paymentLevelInput.min = String(monthly ? 1 : minimumBid);
     paymentLevelInput.max = "10000";
-    paymentLevelInput.value = String(currentLevel);
-    paymentLevelInput.disabled = monthly;
+    paymentLevelInput.value = String(monthly ? monthlyAmount : currentLevel);
+    paymentLevelInput.disabled = false;
   }
+  if (paymentLevelLabel) paymentLevelLabel.textContent = monthly ? "Monthly amount" : "One-time bid";
   if (placementPreview) {
     placementPreview.textContent = monthly
-      ? `Pay $${amountDue} for a winning $${currentLevel} bid and 30 days of featured placement. This is a one-time purchase, not an auto-renewing subscription.`
+      ? `$${amountDue} is charged monthly until cancelled. Every successful renewal adds another $${amountDue} to your cumulative rank bid and extends placement by 30 days.`
       : previousListing
       ? `Your previous $${previousBid} bid is credited. Pay $${amountDue} to raise it to $${currentLevel} and return above the current $${highestBid} leader.`
       : `$${currentLevel} puts you above the current $${highestBid} leader and includes ${amountDue} full day${amountDue === 1 ? "" : "s"} of featured time.`;
   }
   checkoutButton.disabled = false;
   checkoutButton.textContent = monthly
-    ? `Claim monthly · $${amountDue}`
+    ? `Start monthly · $${amountDue}/mo`
     : previousListing
     ? `Pay the $${amountDue} difference · reclaim #1 🚀`
     : `Claim my spot · $${currentLevel}`;

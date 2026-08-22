@@ -63,4 +63,4 @@ Point Stripe webhooks at:
 https://linkforadollar.com/stripe/webhook
 ```
 
-Listen for `checkout.session.completed`.
+Listen for both `checkout.session.completed` and `invoice.paid`. Checkout completion publishes the first paid rank bid; successful recurring invoices add the selected monthly amount to the cumulative bid. The renewal handler ignores `subscription_create` invoices and records invoice IDs idempotently so the initial payment and webhook retries cannot double-bump rank.

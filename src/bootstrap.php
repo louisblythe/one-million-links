@@ -722,6 +722,42 @@ function mark_square_paid(int $squareId, string $checkoutSessionId, ?string $pay
     mark_squares_paid([$squareId], $checkoutSessionId, $paymentIntentId);
 }
 
+function apply_recurring_invoice(object $invoice): void
+{
+    $metadata = $invoice->parent->subscription_details->metadata ?? null;
+    if (($metadata->promotion_type ?? null) !== 'monthly') {
+        return;
+    }
+    $squareId = validate_square_id((int) ($metadata->square_id ?? -1));
+    $monthlyAmountCents = (int) ($metadata->monthly_amount_cents ?? 0);
+    if ($monthlyAmountCents < 100 || $monthlyAmountCents > 1000000 || empty($invoice->id)) {
+        throw new RuntimeException('Recurring rank invoice metadata is invalid.');
+    }
+
+    $db = db();
+    $listing = $db->prepare('SELECT featured_amount_cents FROM squares WHERE square_id = :square_id AND status = "paid"');
+    $listing->execute(['square_id' => $squareId]);
+    $current = $listing->fetch(PDO::FETCH_ASSOC);
+    if (!$current) {
+        throw new RuntimeException('Recurring rank listing does not exist.');
+    }
+    $paidAt = gmdate(DATE_ATOM);
+    $nextTotal = (int) ($current['featured_amount_cents'] ?? 0) + $monthlyAmountCents;
+    $payment = $db->prepare('INSERT OR IGNORE INTO featured_payments (checkout_session_id, square_id, amount_cents, total_bid_cents, created_at) VALUES (:checkout_session_id, :square_id, :amount_cents, :total_bid_cents, :created_at)');
+    $payment->execute(['checkout_session_id' => 'invoice:' . $invoice->id, 'square_id' => $squareId, 'amount_cents' => $monthlyAmountCents, 'total_bid_cents' => $nextTotal, 'created_at' => $paidAt]);
+    if ($payment->rowCount() === 0) {
+        return;
+    }
+    $existingUntil = $db->prepare('SELECT featured_until FROM squares WHERE square_id = :square_id');
+    $existingUntil->execute(['square_id' => $squareId]);
+    $value = $existingUntil->fetchColumn();
+    $now = new DateTimeImmutable($paidAt);
+    $base = $value ? new DateTimeImmutable((string) $value) : $now;
+    if ($base < $now) $base = $now;
+    $update = $db->prepare('UPDATE squares SET featured_from = :featured_from, featured_until = :featured_until, featured_amount_cents = :featured_amount_cents WHERE square_id = :square_id');
+    $update->execute(['featured_from' => $paidAt, 'featured_until' => $base->modify('+30 days')->format(DATE_ATOM), 'featured_amount_cents' => $nextTotal, 'square_id' => $squareId]);
+}
+
 function claimed_square(int $squareId): ?array
 {
     $stmt = db()->prepare('SELECT square_id, url FROM squares WHERE square_id = :square_id AND status = "paid"');

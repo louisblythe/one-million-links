@@ -128,7 +128,7 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
             <ul class="claim-benefits">
               <li>Your listing stays permanently</li>
               <li>Bid for rank without choosing a square</li>
-              <li>Choose a custom bid or a one-time 30-day placement</li>
+              <li>Choose a one-time bid or a recurring monthly rank boost</li>
             </ul>
             <p class="rebid-note"><strong>Outbid or be outbid.</strong> Enter the same URL again and your previous bid is credited. We automatically calculate the amount needed to return to #1.</p>
           </div>
@@ -173,7 +173,7 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
               <label for="promotion_type">Placement</label>
               <select id="promotion_type" name="promotion_type">
                 <option value="bid">Custom rank bid</option>
-                <option value="monthly">30-day top placement</option>
+                <option value="monthly">Recurring monthly bid</option>
               </select>
             </div>
             <div class="field-row payment-level-field">

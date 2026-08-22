@@ -160,10 +160,13 @@ try {
         $previousBid = intdiv((int) $rebid['previous_cents'], 100);
         $highestBid = intdiv((int) $rebid['highest_cents'], 100);
         $minimumBid = max(1, $highestBid + 1, $previousBid + 1);
+        $monthlyAmount = $promotionType === 'monthly'
+            ? normalize_payment_level($_POST['payment_level'] ?? 30, 1)
+            : 0;
         $paymentLevel = $promotionType === 'monthly'
-            ? max($highestBid + 1, $previousBid + 30)
+            ? $previousBid + $monthlyAmount
             : normalize_payment_level($_POST['payment_level'] ?? $minimumBid, $minimumBid);
-        $amountDue = $paymentLevel - $previousBid;
+        $amountDue = $promotionType === 'monthly' ? $monthlyAmount : $paymentLevel - $previousBid;
         $featuredDays = $promotionType === 'monthly' ? 30 : $amountDue;
         $purchaseLocation = country_location((string) ($_POST['country'] ?? ''));
         $isNewListing = $rebid['square_ids'] === [];
@@ -189,6 +192,9 @@ try {
             'featured_days' => (string) $featuredDays,
             'total_bid_cents' => (string) ($paymentLevel * 100),
         ];
+        if ($promotionType === 'monthly') {
+            $metadata['monthly_amount_cents'] = (string) ($monthlyAmount * 100);
+        }
         if ($purchaseLocation !== null) {
             $metadata += [
                 'purchase_city' => $purchaseLocation['city'],
@@ -200,23 +206,35 @@ try {
         }
 
         try {
-            $session = $stripe->checkout->sessions->create([
-            'mode' => 'payment',
-            'client_reference_id' => (string) $squareId,
-            'customer_email' => $email,
-            'success_url' => app_url('/success?session_id={CHECKOUT_SESSION_ID}'),
-            'cancel_url' => app_url('/?cancelled=1'),
-            'integration_identifier' => 'featured_placement_' . random_letters(8),
-            'line_items' => [[
+            $lineItem = [
                 'quantity' => 1,
                 'price_data' => [
                     'currency' => strtolower(env_value('APP_CURRENCY', 'usd') ?? 'usd'),
                     'unit_amount' => $amountDue * 100,
                     'product' => env_value('STRIPE_PRODUCT_ID', 'prod_Uam47pbENlHbmX'),
                 ],
-            ]],
+            ];
+            if ($promotionType === 'monthly') {
+                $lineItem['price_data']['recurring'] = ['interval' => 'month'];
+            }
+            $sessionData = [
+            'mode' => $promotionType === 'monthly' ? 'subscription' : 'payment',
+            'client_reference_id' => (string) $squareId,
+            'customer_email' => $email,
+            'success_url' => app_url('/success?session_id={CHECKOUT_SESSION_ID}'),
+            'cancel_url' => app_url('/?cancelled=1'),
+            'integration_identifier' => 'featured_placement_' . random_letters(8),
+            'line_items' => [$lineItem],
                 'metadata' => $metadata,
-            ]);
+            ];
+            if ($promotionType === 'monthly') {
+                $sessionData['subscription_data'] = ['metadata' => [
+                    'square_id' => (string) $squareId,
+                    'monthly_amount_cents' => (string) ($monthlyAmount * 100),
+                    'promotion_type' => 'monthly',
+                ]];
+            }
+            $session = $stripe->checkout->sessions->create($sessionData);
         } catch (Throwable $error) {
             if ($isNewListing) {
                 release_pending_listing($squareId);
@@ -291,6 +309,10 @@ try {
                 $totalBidCents = isset($session->metadata->total_bid_cents) ? max(0, (int) $session->metadata->total_bid_cents) : $featuredDays * 100;
                 mark_squares_paid($squareIds, $session->id, is_string($session->payment_intent) ? $session->payment_intent : null, $featuredDays, $totalBidCents, stripe_purchase_location($session), stripe_logo_url($session));
             }
+        }
+
+        if ($event->type === 'invoice.paid' && ($event->data->object->billing_reason ?? null) !== 'subscription_create') {
+            apply_recurring_invoice($event->data->object);
         }
 
         json_response(['received' => true]);
