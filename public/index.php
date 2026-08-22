@@ -142,6 +142,7 @@ try {
     if ($method === 'POST' && $path === '/checkout') {
         $squareId = validate_square_id(((int) ($_POST['square_id'] ?? 1)) - 1);
         $label = normalize_label((string) ($_POST['label'] ?? ''));
+        $description = normalize_description((string) ($_POST['description'] ?? ''));
         $url = normalize_url((string) ($_POST['url'] ?? ''));
         $logoUrl = trim((string) ($_POST['logo_url'] ?? ''));
         $logoUrl = $logoUrl === '' ? null : normalize_url($logoUrl);
@@ -156,7 +157,7 @@ try {
         $amountDue = $paymentLevel - $previousBid;
         $squareIds = $rebid['square_ids'] !== []
             ? $rebid['square_ids']
-            : reserve_squares($squareId, $packSize, $label, $url, $category, $email, $logoUrl);
+            : reserve_squares($squareId, $packSize, $label, $description, $url, $category, $email, $logoUrl);
         $squareId = (int) $squareIds[0];
 
         configure_stripe();
@@ -179,6 +180,7 @@ try {
             'metadata' => [
                 'square_id' => (string) $squareId,
                 'label' => $label,
+                'description' => $description,
                 'url' => $url,
                 'logo_url' => $logoUrl ?? '',
                 'category' => $category,

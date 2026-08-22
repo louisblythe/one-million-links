@@ -43,6 +43,9 @@ $profileDescription = 'View ' . $profile['label'] . "'s purchaser-submitted Link
           <span class="verified-badge">Verified company</span>
         <?php endif; ?>
       </p>
+      <?php if ($profile['description'] !== '') : ?>
+        <p class="profile-description"><?= htmlspecialchars($profile['description'], ENT_QUOTES) ?></p>
+      <?php endif; ?>
       <dl class="profile-stats">
         <div><dt>Squares</dt><dd><?= (int) $profile['square_count'] ?></dd></div>
         <div><dt>Territories</dt><dd><?= (int) $profile['territory_count'] ?></dd></div>

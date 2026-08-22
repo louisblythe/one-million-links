@@ -61,6 +61,7 @@ const allSquares = rawSquares.map((square) => {
   return {
     id,
     label: square.label,
+    description: square.description || "",
     url: square.url,
     host,
     category,
@@ -885,7 +886,7 @@ function renderDirectory() {
       <span class="directory-row__identity">
         <strong><a href="/squares/${square.id + 1}">${escapeHtml(square.label)}</a></strong>
         <span>${escapeHtml(square.host || square.url)}</span>
-        <span>${escapeHtml(square.category)} · square #${square.id + 1}</span>
+        <span class="directory-row__description">${escapeHtml(square.description || `${square.category} · square #${square.id + 1}`)}</span>
       </span>
       <span class="directory-row__metric">
         <strong>${index === 0 && featureState(square, now) === "active" ? "#1" : square.featuredAmountCents > 0 ? `$${square.featuredAmountCents / 100}` : formattedClicks(square.clickCount)}</strong>

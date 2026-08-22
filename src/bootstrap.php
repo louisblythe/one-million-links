@@ -200,7 +200,7 @@ function seo_head(string $title, string $description, ?string $path = '/', strin
         . '<link rel="icon" href="/favicon.svg" type="image/svg+xml">' . PHP_EOL
         . '<link rel="apple-touch-icon" href="/apple-touch-icon.png">' . PHP_EOL
         . '<link rel="manifest" href="/site.webmanifest">' . PHP_EOL
-        . '<link rel="stylesheet" href="/assets/app.css?v=20260822-stats">' . PHP_EOL
+        . '<link rel="stylesheet" href="/assets/app.css?v=20260822-form-details">' . PHP_EOL
         . datafast_analytics_script();
 }
 
@@ -214,7 +214,7 @@ function render(string $view, array $data = []): never
 function paid_squares(): array
 {
     $stmt = db()->query(
-        'SELECT square_id, label, url, category, click_count, verified_company, territory_key, territory_size, featured_from, featured_until, featured_amount_cents, purchase_city, purchase_country, purchase_latitude, purchase_longitude, location_source, logo_url, paid_at
+        'SELECT square_id, label, description, url, category, click_count, verified_company, territory_key, territory_size, featured_from, featured_until, featured_amount_cents, purchase_city, purchase_country, purchase_latitude, purchase_longitude, location_source, logo_url, paid_at
             FROM squares
             WHERE status = "paid"
             ORDER BY square_id ASC'
@@ -255,6 +255,7 @@ function profile_for_host(string $host): ?array
     return [
         'host' => $host,
         'label' => $first['label'],
+        'description' => $first['description'] ?? '',
         'url' => $first['url'],
         'category' => $first['category'],
         'verified_company' => (bool) $first['verified_company'],
@@ -380,6 +381,11 @@ function normalize_label(string $label): string
     return mb_substr($label, 0, 80);
 }
 
+function normalize_description(string $description): string
+{
+    return mb_substr(trim($description), 0, 180);
+}
+
 function normalize_category(string $category): string
 {
     $allowed = ['AI', 'SaaS', 'Ecommerce', 'Agency', 'Media', 'Developer tools', 'Finance', 'Local business', 'Other'];
@@ -493,7 +499,7 @@ function rebid_context(string $url): array
     return ['square_ids' => $squareIds, 'previous_cents' => (int) ($primary['featured_amount_cents'] ?? 0), 'highest_cents' => $highest];
 }
 
-function reserve_squares(int $squareId, int $packSize, string $label, string $url, string $category, ?string $email, ?string $logoUrl = null): array
+function reserve_squares(int $squareId, int $packSize, string $label, string $description, string $url, string $category, ?string $email, ?string $logoUrl = null): array
 {
     $ids = adjacent_square_ids($squareId, $packSize);
     $db = db();
@@ -510,10 +516,11 @@ function reserve_squares(int $squareId, int $packSize, string $label, string $ur
     $verified = company_is_verified($url, $email) ? 1 : 0;
     $ownerHost = host_from_url($url);
     $stmt = $db->prepare(
-        'INSERT INTO squares (square_id, label, url, owner_host, category, owner_email, verified_company, territory_key, territory_size, logo_url, status, created_at)
-            VALUES (:square_id, :label, :url, :owner_host, :category, :owner_email, :verified_company, :territory_key, :territory_size, :logo_url, "pending", :created_at)
+        'INSERT INTO squares (square_id, label, description, url, owner_host, category, owner_email, verified_company, territory_key, territory_size, logo_url, status, created_at)
+            VALUES (:square_id, :label, :description, :url, :owner_host, :category, :owner_email, :verified_company, :territory_key, :territory_size, :logo_url, "pending", :created_at)
         ON CONFLICT(square_id) DO UPDATE SET
             label = excluded.label,
+            description = excluded.description,
             url = excluded.url,
             owner_host = excluded.owner_host,
             category = excluded.category,
@@ -531,6 +538,7 @@ function reserve_squares(int $squareId, int $packSize, string $label, string $ur
         $stmt->execute([
             'square_id' => $id,
             'label' => $label,
+            'description' => $description ?: null,
             'url' => $url,
             'owner_host' => $ownerHost,
             'category' => $category,
@@ -548,7 +556,7 @@ function reserve_squares(int $squareId, int $packSize, string $label, string $ur
 
 function reserve_square(int $squareId, string $label, string $url, string $category, ?string $email): void
 {
-    reserve_squares($squareId, 1, $label, $url, $category, $email);
+    reserve_squares($squareId, 1, $label, '', $url, $category, $email);
 }
 
 function stripe_purchase_location(object $session): ?array

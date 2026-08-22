@@ -137,8 +137,8 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
               <input id="square_id" name="square_id" type="number" min="1" max="1000000" value="<?= (int) $selectedSquare ?>" required>
             </div>
             <div class="field-row">
-              <label for="label">Brand on the wall</label>
-              <input id="label" name="label" maxlength="80" placeholder="Your brand" required>
+              <label for="label">Friendly title</label>
+              <input id="label" name="label" maxlength="80" placeholder="What should we call you?" required>
             </div>
             <div class="field-row">
               <label for="url">Your website</label>
@@ -146,7 +146,11 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
             </div>
             <div class="field-row logo-field">
               <label for="logo_url">Logo URL <span>(optional)</span></label>
-              <input id="logo_url" name="logo_url" type="url" maxlength="500" placeholder="Auto-detected from your website">
+              <input id="logo_url" name="logo_url" type="url" maxlength="500" placeholder="https://yourwebsite.com/logo.png">
+            </div>
+            <div class="field-row description-field">
+              <label for="description">Friendly description <span>(optional)</span></label>
+              <textarea id="description" name="description" maxlength="180" rows="2" placeholder="A short, human introduction to what you do"></textarea>
             </div>
             <div class="field-row">
               <label for="category">Category</label>
@@ -194,7 +198,7 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
                 <option value="nofollow">Nofollow public link</option>
               </select>
             </div>
-            <p class="auto-brand-note">We infer your name and icon from the link automatically.</p>
+            <p class="auto-brand-note">We’ll suggest a title from your website. Add your own logo and a short introduction to make the listing feel like you.</p>
             <button id="checkoutButton" type="submit">Claim my rank →</button>
           </form>
 
@@ -286,6 +290,6 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
       window.__PAID_SQUARES__ = <?= $squaresJson ?>;
     </script>
     <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js" defer></script>
-    <script src="/assets/app.js?v=20260822-stats" defer></script>
+    <script src="/assets/app.js?v=20260822-form-details" defer></script>
   </body>
 </html>
