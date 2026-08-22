@@ -707,6 +707,38 @@ body[data-directory-mode="true"] .claim-panel {
   box-shadow: 0 22px 60px rgba(16, 37, 31, 0.1);
 }
 
+body[data-directory-mode="true"] .canvas-panel {
+  grid-row: 1;
+}
+
+body[data-directory-mode="true"] .claim-panel {
+  grid-row: 2;
+}
+
+body[data-directory-mode="true"] h1 em {
+  display: block;
+  color: #177e6d;
+  font-style: normal;
+}
+
+body[data-directory-mode="true"] .claim-panel form .field-row {
+  display: none;
+}
+
+body[data-directory-mode="true"] .claim-panel form .field-row:has(#url),
+body[data-directory-mode="true"] .claim-panel form .field-row:has(#payment_level) {
+  display: grid;
+  grid-column: span 6;
+}
+
+body[data-directory-mode="true"] .auto-brand-note {
+  grid-column: 1 / -1;
+  margin: -4px 0 0;
+  color: #60756f;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
 body[data-directory-mode="true"] .claim-copy {
   justify-items: center;
   text-align: center;
@@ -2138,4 +2170,29 @@ body[data-directory-mode="true"] .rebid-note {
   width: min(680px, 100%);
   padding: 12px 14px;
   text-align: left;
+}
+
+body[data-directory-mode="true"] .canvas-panel {
+  grid-row: 1;
+}
+
+body[data-directory-mode="true"] .claim-panel {
+  grid-row: 2;
+}
+
+body[data-directory-mode="true"] .claim-panel form .field-row {
+  display: none;
+}
+
+body[data-directory-mode="true"] .claim-panel form .field-row:has(#url),
+body[data-directory-mode="true"] .claim-panel form .field-row:has(#payment_level) {
+  display: grid;
+  grid-column: span 6;
+}
+
+@media (max-width: 760px) {
+  body[data-directory-mode="true"] .claim-panel form .field-row:has(#url),
+  body[data-directory-mode="true"] .claim-panel form .field-row:has(#payment_level) {
+    grid-column: 1 / -1;
+  }
 }

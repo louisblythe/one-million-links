@@ -7,7 +7,7 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <?= seo_head('Link for a Dollar | Public Discovery Board', 'Claim a permanent public profile and sponsored link on a million-square discovery board for one dollar.', '/') ?>
+    <?= seo_head('Link for a Dollar | The Permanent Link Leaderboard', 'Claim a permanent branded listing for $1, then compete for the #1 position on the live link leaderboard.', '/') ?>
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
     <script type="application/ld+json">
       <?= json_encode([
@@ -24,9 +24,9 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
       <section class="masthead">
         <a class="list-brand" href="/">Link for a Dollar</a>
         <div class="hero-copy">
-          <p class="hero-kicker">Permanent. Public. Yours.</p>
-          <h1>Own a piece of the internet</h1>
-          <p class="hero-subhead">1,000,000 permanent public spots. Claim yours, share the card, and give people another way to discover your site.</p>
+          <p class="hero-kicker">Permanent listing. Live competition.</p>
+          <h1>The link leaderboard. <em>The highest active bid takes #1.</em></h1>
+          <p class="hero-subhead">No ads. No algorithms. Claim a permanent branded listing for $1, then promote it for as long as you choose. Every click lands on your site.</p>
         </div>
         <div class="stats">
           <strong id="claimedCount"><?= count($paidSquares) ?></strong>
@@ -119,13 +119,13 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
         <aside class="claim-panel">
           <div class="claim-copy">
             <p class="eyebrow">Featured placement</p>
-            <h2>Claim the #1 spot for as long as you choose</h2>
+            <h2>Claim #1 for as long as you choose</h2>
             <ul class="claim-benefits">
-              <li>Add your brand to the wall</li>
-              <li>Get a shareable claim page</li>
+              <li>Your listing stays permanently</li>
+              <li>Every extra dollar adds a day at the top</li>
               <li>Previous bids are credited when you reclaim #1</li>
             </ul>
-            <p class="rebid-note"><strong>Already listed?</strong> Enter the same destination URL. We credit your previous bid, so you only pay the difference needed to beat the current leader. 🚀</p>
+            <p class="rebid-note"><strong>Outbid or be outbid.</strong> Enter the same URL again and your previous payment is credited. You only pay the difference needed to return to the top. 🚀</p>
           </div>
 
           <form action="/checkout" method="post">
@@ -138,8 +138,8 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
               <input id="label" name="label" maxlength="80" placeholder="Your brand" required>
             </div>
             <div class="field-row">
-              <label for="url">Link destination</label>
-              <input id="url" name="url" type="url" placeholder="https://example.com" required>
+              <label for="url">Your website</label>
+              <input id="url" name="url" type="url" placeholder="https://yourwebsite.com" required>
             </div>
             <div class="field-row logo-field">
               <label for="logo_url">Logo URL <span>(optional)</span></label>
@@ -169,12 +169,12 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
               </select>
             </div>
             <div class="field-row payment-level-field">
-              <label for="payment_level">Choose your #1 run</label>
+              <label for="payment_level">Promotion amount</label>
               <div class="money-input">
                 <span aria-hidden="true">$</span>
                 <input id="payment_level" name="payment_level" type="number" min="1" max="10000" step="1" value="1" required aria-describedby="placementPreview">
               </div>
-              <small id="placementPreview">Bid at least $1 above the current leader. Already listed? You only pay the difference.</small>
+              <small id="placementPreview">Your first $1 publishes the listing permanently. Additional dollars buy more time at #1.</small>
             </div>
             <div class="field-row">
               <label for="email">Ownership receipt</label>
@@ -191,7 +191,8 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
                 <option value="nofollow">Nofollow public link</option>
               </select>
             </div>
-            <button id="checkoutButton" type="submit">Claim 1 square for $1</button>
+            <p class="auto-brand-note">We infer your name and icon from the link automatically.</p>
+            <button id="checkoutButton" type="submit">Claim my rank →</button>
           </form>
 
           <div class="selection">
@@ -281,6 +282,6 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
       window.__PAID_SQUARES__ = <?= $squaresJson ?>;
     </script>
     <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js" defer></script>
-    <script src="/assets/app.js?v=20260821-branding" defer></script>
+    <script src="/assets/app.js?v=20260822-leaderboard" defer></script>
   </body>
 </html>

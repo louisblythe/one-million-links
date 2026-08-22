@@ -35,6 +35,7 @@ const categoryFilter = document.getElementById("categoryFilter");
 const packSizeInput = document.getElementById("pack_size");
 const paymentLevelInput = document.getElementById("payment_level");
 const linkUrlInput = document.getElementById("url");
+const labelInput = document.getElementById("label");
 const placementPreview = document.getElementById("placementPreview");
 const checkoutButton = document.getElementById("checkoutButton");
 const gridViewButton = document.getElementById("gridViewButton");
@@ -115,6 +116,17 @@ function toHost(url) {
     return new URL(url).hostname.replace(/^www\./, "");
   } catch {
     return "";
+  }
+}
+
+function inferBrandFromUrl() {
+  if (!linkUrlInput || !labelInput) return;
+  try {
+    const host = new URL(/^https?:\/\//i.test(linkUrlInput.value) ? linkUrlInput.value : `https://${linkUrlInput.value}`).hostname.replace(/^www\./, "");
+    const name = host.split(".")[0].replace(/[-_]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+    if (name) labelInput.value = name.slice(0, 80);
+  } catch {
+    // Leave the existing value until the URL is valid.
   }
 }
 
@@ -1149,7 +1161,10 @@ zoomHome.addEventListener("click", fitToOccupied);
 squareInput.addEventListener("input", () => selectSquare(Number(squareInput.value || 1) - 1, true));
 packSizeInput?.addEventListener("change", updateCheckoutButton);
 paymentLevelInput?.addEventListener("input", updateCheckoutButton);
-linkUrlInput?.addEventListener("input", updateCheckoutButton);
+linkUrlInput?.addEventListener("input", () => {
+  inferBrandFromUrl();
+  updateCheckoutButton();
+});
 companySearch.addEventListener("input", applyFilters);
 categoryFilter.addEventListener("change", () => {
   applyFilters();
