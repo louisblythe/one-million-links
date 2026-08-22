@@ -16,6 +16,13 @@ test("mobile discovery and claim flow remain usable without horizontal overflow"
 test("mobile stats and map views render", async ({ page }) => {
   await page.goto("/stats");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Every claim");
+  await expect(page.getByText("Online now", { exact: true })).toBeVisible();
+  await expect(page.locator("#statsActiveNow")).not.toHaveText("—");
+  await expect(page.locator("#statsSessions24h")).not.toHaveText("—");
+  await expect(page.locator("#statsFreshness")).toContainText("Live audience updated");
+  const viewport = page.viewportSize();
+  const statsWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+  expect(statsWidth).toBeLessThanOrEqual(viewport.width + 1);
   await page.goto("/?view=map");
   await expect(page.locator("#purchaseMapPanel")).toBeVisible();
 });

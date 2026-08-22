@@ -1079,7 +1079,7 @@ function updateCheckoutButton() {
   }
 
   const now = Date.now();
-  const highestBid = Math.max(0, ...allSquares.filter((square) => featureState(square, now) === "active").map((square) => square.featuredAmountCents / 100));
+  const highestBid = Math.max(0, ...allSquares.filter((square) => featureState(square, now) !== "none").map((square) => square.featuredAmountCents / 100));
   let normalizedUrl = "";
   try {
     normalizedUrl = new URL(linkUrlInput?.value || "").toString();
