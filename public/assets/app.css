@@ -2196,3 +2196,141 @@ body[data-directory-mode="true"] .claim-panel form .field-row:has(#payment_level
     grid-column: 1 / -1;
   }
 }
+
+/* Compact premium layout. Keep these final so legacy grid rules cannot override it. */
+body[data-directory-mode="true"] .masthead {
+  gap: 10px;
+  margin-bottom: 22px;
+  padding: 44px 20px 4px;
+}
+
+body[data-directory-mode="true"] .hero-copy {
+  gap: 10px;
+}
+
+body[data-directory-mode="true"] h1 {
+  max-width: 720px;
+  font-size: clamp(2.25rem, 5.2vw, 4.15rem);
+  line-height: 0.98;
+}
+
+body[data-directory-mode="true"] .hero-subhead {
+  max-width: 660px;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+body[data-directory-mode="true"] .workspace {
+  gap: 24px;
+}
+
+body[data-directory-mode="true"] .claim-panel {
+  justify-self: center;
+  width: min(880px, 100%);
+  gap: 15px;
+  padding: 24px 28px;
+  border-radius: 18px;
+}
+
+body[data-directory-mode="true"] .claim-copy {
+  gap: 9px;
+}
+
+body[data-directory-mode="true"] .claim-copy h2 {
+  max-width: 560px;
+  font-size: clamp(1.4rem, 2.4vw, 1.85rem);
+  line-height: 1.1;
+}
+
+body[data-directory-mode="true"] .claim-benefits {
+  gap: 6px 18px;
+  margin: 0;
+  font-size: 0.78rem;
+  list-style: none;
+}
+
+body[data-directory-mode="true"] .claim-benefits li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+body[data-directory-mode="true"] .claim-benefits li::before {
+  width: 5px;
+  height: 5px;
+  flex: 0 0 5px;
+  border-radius: 50%;
+  background: #27806e;
+  content: "";
+}
+
+body[data-directory-mode="true"] .rebid-note {
+  width: min(620px, 100%);
+  margin: 0;
+  padding: 9px 12px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+body[data-directory-mode="true"] .claim-panel form {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  gap: 10px 12px;
+}
+
+body[data-directory-mode="true"] .claim-panel input,
+body[data-directory-mode="true"] .claim-panel select,
+body[data-directory-mode="true"] .money-input {
+  min-height: 46px;
+}
+
+body[data-directory-mode="true"] .money-input input {
+  min-height: 44px;
+}
+
+body[data-directory-mode="true"] #checkoutButton {
+  min-height: 50px;
+  margin-top: 0;
+}
+
+body[data-directory-mode="true"] .auto-brand-note {
+  margin: -2px 0 0;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 760px) {
+  body[data-directory-mode="true"] .masthead {
+    gap: 12px;
+    margin-bottom: 18px;
+    padding: 52px 8px 0;
+  }
+
+  body[data-directory-mode="true"] h1 {
+    max-width: 12ch;
+    font-size: clamp(1.9rem, 8.5vw, 2.3rem);
+    line-height: 1.02;
+  }
+
+  body[data-directory-mode="true"] .hero-subhead {
+    max-width: 34ch;
+    font-size: 0.84rem;
+    line-height: 1.4;
+  }
+
+  body[data-directory-mode="true"] .claim-panel {
+    gap: 14px;
+    padding: 20px 16px;
+  }
+
+  body[data-directory-mode="true"] .claim-benefits {
+    display: none;
+  }
+
+  body[data-directory-mode="true"] .claim-copy h2 {
+    font-size: 1.35rem;
+  }
+
+  body[data-directory-mode="true"] .rebid-note {
+    display: none;
+  }
+}
