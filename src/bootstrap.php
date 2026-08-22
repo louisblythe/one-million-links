@@ -11,6 +11,8 @@ const GRID_WIDTH = 1000;
 const STRIPE_API_VERSION = '2026-07-29.dahlia';
 const DATAFAST_WEBSITE_ID = 'dfid_covNyYU25Nl5a20HXqsd3';
 const DATAFAST_DOMAIN = 'linkforadollar.com';
+const PIQO_SITE_ID = 'zibyj4ic';
+const PIQO_DOMAIN = 'linkforadollar.com';
 
 function load_env(string $path): void
 {
@@ -175,6 +177,18 @@ function datafast_analytics_script(): string
     return '<script defer data-website-id="' . DATAFAST_WEBSITE_ID . '" data-domain="' . DATAFAST_DOMAIN . '" src="https://datafa.st/js/script.js"></script>' . PHP_EOL;
 }
 
+function piqo_analytics_script(): string
+{
+    return '<script defer data-site="' . PIQO_SITE_ID . '" data-domain="' . PIQO_DOMAIN . '" src="https://piqo.app/piqo.js"></script>' . PHP_EOL;
+}
+
+function piqo_cookie_value(string $name): ?string
+{
+    $value = trim((string) ($_COOKIE[$name] ?? ''));
+
+    return preg_match('/\A[A-Za-z0-9._~-]{1,128}\z/', $value) === 1 ? $value : null;
+}
+
 function seo_head(string $title, string $description, ?string $path = '/', string $robots = 'index, follow, max-image-preview:large'): string
 {
     $escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
@@ -204,8 +218,9 @@ function seo_head(string $title, string $description, ?string $path = '/', strin
         . '<link rel="icon" href="/favicon.svg" type="image/svg+xml">' . PHP_EOL
         . '<link rel="apple-touch-icon" href="/apple-touch-icon.png">' . PHP_EOL
         . '<link rel="manifest" href="/site.webmanifest">' . PHP_EOL
-        . '<link rel="stylesheet" href="/assets/app.css?v=20260822-checkout">' . PHP_EOL
-        . datafast_analytics_script();
+        . '<link rel="stylesheet" href="/assets/app.css?v=20260822-recurring-funnel">' . PHP_EOL
+        . datafast_analytics_script()
+        . piqo_analytics_script();
 }
 
 function render(string $view, array $data = []): never

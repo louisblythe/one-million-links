@@ -17,6 +17,8 @@ storage/*.sqlite
 storage/*.sqlite-*
 .playwright-mcp
 .wrangler/
+test-results/
+output/playwright/report/
 
 # Editor directories and files
 .vscode/*

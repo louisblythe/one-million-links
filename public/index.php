@@ -174,6 +174,8 @@ try {
             ? $rebid['square_ids']
             : [reserve_next_listing($label, $description, $url, $category, $email, $logoUrl)];
         $squareId = (int) $squareIds[0];
+        $piqoVisitorId = piqo_cookie_value('piqo_visitor');
+        $piqoSessionId = piqo_cookie_value('piqo_session');
 
         $stripe = configure_stripe();
 
@@ -204,6 +206,12 @@ try {
                 'location_source' => $purchaseLocation['source'],
             ];
         }
+        if ($piqoVisitorId !== null) {
+            $metadata['piqo_visitor_id'] = $piqoVisitorId;
+        }
+        if ($piqoSessionId !== null) {
+            $metadata['piqo_session_id'] = $piqoSessionId;
+        }
 
         try {
             $lineItem = [
@@ -218,13 +226,13 @@ try {
                 $lineItem['price_data']['recurring'] = ['interval' => 'month'];
             }
             $sessionData = [
-            'mode' => $promotionType === 'monthly' ? 'subscription' : 'payment',
-            'client_reference_id' => (string) $squareId,
-            'customer_email' => $email,
-            'success_url' => app_url('/success?session_id={CHECKOUT_SESSION_ID}'),
-            'cancel_url' => app_url('/?cancelled=1'),
-            'integration_identifier' => 'featured_placement_' . random_letters(8),
-            'line_items' => [$lineItem],
+                'mode' => $promotionType === 'monthly' ? 'subscription' : 'payment',
+                'client_reference_id' => (string) $squareId,
+                'customer_email' => $email,
+                'success_url' => app_url('/success?session_id={CHECKOUT_SESSION_ID}'),
+                'cancel_url' => app_url('/?cancelled=1'),
+                'integration_identifier' => 'featured_placement_' . random_letters(8),
+                'line_items' => [$lineItem],
                 'metadata' => $metadata,
             ];
             if ($promotionType === 'monthly') {
@@ -233,6 +241,10 @@ try {
                     'monthly_amount_cents' => (string) ($monthlyAmount * 100),
                     'promotion_type' => 'monthly',
                 ]];
+            } elseif ($piqoVisitorId !== null) {
+                $sessionData['payment_intent_data'] = [
+                    'metadata' => ['piqo_visitor_id' => $piqoVisitorId],
+                ];
             }
             $session = $stripe->checkout->sessions->create($sessionData);
         } catch (Throwable $error) {
@@ -282,7 +294,15 @@ try {
         }
 
         header('X-Robots-Tag: noindex, follow');
-        render('success', ['paidSquares' => paid_squares()]);
+        render('success', [
+            'paidSquares' => paid_squares(),
+            'conversion' => isset($session) && ($session->payment_status ?? null) === 'paid' ? [
+                'order_id' => (string) $session->id,
+                'value' => number_format(((int) ($session->amount_total ?? 0)) / 100, 2, '.', ''),
+                'currency' => strtoupper((string) ($session->currency ?? env_value('APP_CURRENCY', 'usd'))),
+                'square_count' => (string) count($squareIds ?? []),
+            ] : null,
+        ]);
     }
 
     if ($method === 'POST' && $path === '/stripe/webhook') {

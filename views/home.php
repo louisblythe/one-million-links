@@ -291,6 +291,6 @@ $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
       window.__PAID_SQUARES__ = <?= $squaresJson ?>;
     </script>
     <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js" defer></script>
-    <script src="/assets/app.js?v=20260822-checkout" defer></script>
+    <script src="/assets/app.js?v=20260822-recurring-funnel" defer></script>
   </body>
 </html>

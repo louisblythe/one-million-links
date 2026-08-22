@@ -53,6 +53,13 @@ const mapLocationCount = document.getElementById("mapLocationCount");
 const mapEmptyState = document.getElementById("mapEmptyState");
 const zoomControls = document.querySelector(".zoom-controls");
 const claimDialog = document.getElementById("claimDialog");
+const claimForm = claimDialog?.querySelector('form[action="/checkout"]');
+
+function trackFunnelEvent(name, props = {}) {
+  if (typeof window.piqo === "function") {
+    window.piqo("event", name, props);
+  }
+}
 
 const rawSquares = window.__PAID_SQUARES__ || [];
 const allSquares = rawSquares.map((square) => {
@@ -171,6 +178,40 @@ function brandMark(square) {
 
 function visitHref(squareId) {
   return `/go/${squareId + 1}`;
+}
+
+function listingShareLinks(square) {
+  const publicUrl = new URL(`/squares/${square.id + 1}`, window.location.origin);
+  const title = `${square.label} on Link for a Dollar`;
+  const trackedUrl = (source) => {
+    const url = new URL(publicUrl);
+    url.searchParams.set("utm_source", source);
+    url.searchParams.set("utm_medium", "social");
+    url.searchParams.set("utm_campaign", "claim_share");
+    url.searchParams.set("utm_content", `directory_square_${square.id + 1}`);
+    return url.toString();
+  };
+
+  return {
+    x: `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(trackedUrl("x"))}`,
+    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(trackedUrl("linkedin"))}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(trackedUrl("facebook"))}`,
+  };
+}
+
+function directoryActions(square) {
+  const share = listingShareLinks(square);
+  const label = escapeHtml(square.label);
+
+  return `<span class="directory-row__actions">
+    <a class="directory-row__visit" href="${escapeHtml(visitHref(square.id))}" target="_blank" rel="noopener">Visit <span aria-hidden="true">↗</span></a>
+    <span class="directory-row__share" aria-label="Share ${label}">
+      <span class="directory-row__share-label" aria-hidden="true">Share</span>
+      <a href="${escapeHtml(share.x)}" target="_blank" rel="noopener" aria-label="Share ${label} on X">X</a>
+      <a href="${escapeHtml(share.linkedin)}" target="_blank" rel="noopener" aria-label="Share ${label} on LinkedIn">in</a>
+      <a href="${escapeHtml(share.facebook)}" target="_blank" rel="noopener" aria-label="Share ${label} on Facebook">f</a>
+    </span>
+  </span>`;
 }
 
 function formattedClicks(clicks) {
@@ -894,7 +935,7 @@ function renderDirectory() {
         <strong>${index === 0 && featureState(square, now) === "active" ? "#1" : square.featuredAmountCents > 0 ? `$${square.featuredAmountCents / 100}` : formattedClicks(square.clickCount)}</strong>
         <span>${placementTimeLabel(square, now, index === 0) || `click${square.clickCount === 1 ? "" : "s"}`}</span>
       </span>
-      <a class="directory-row__visit" href="${escapeHtml(visitHref(square.id))}" target="_blank" rel="noopener">Visit <span aria-hidden="true">↗</span></a>
+      ${directoryActions(square)}
     </li>
   `).join("") : `
     <li class="directory-empty">
@@ -1082,6 +1123,10 @@ function updateCheckoutButton() {
 function openClaimDialog() {
   if (!claimDialog) return;
   claimDialog.showModal();
+  trackFunnelEvent("claim_started", {
+    square: String(selectedId + 1),
+    source: "claim_dialog",
+  });
   requestAnimationFrame(() => linkUrlInput?.focus());
 }
 
@@ -1201,6 +1246,14 @@ document.querySelector("[data-open-claim]")?.addEventListener("click", openClaim
 document.querySelector("[data-close-claim]")?.addEventListener("click", () => claimDialog?.close());
 claimDialog?.addEventListener("click", (event) => {
   if (event.target === claimDialog) claimDialog.close();
+});
+claimForm?.addEventListener("submit", () => {
+  trackFunnelEvent("checkout_started", {
+    square: String(selectedId + 1),
+    pack_size: String(selectedPackSize()),
+    value: String(paymentLevelInput?.value || "1"),
+    currency: "USD",
+  });
 });
 window.addEventListener("resize", resizeCanvas);
 

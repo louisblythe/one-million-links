@@ -9,12 +9,20 @@
     "predeploy": "npm run build:worker-assets",
     "deploy": "wrangler deploy",
     "test:seo": "node scripts/seo-audit.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "e2e:serve": "wrangler d1 migrations apply linkforadollar --local --persist-to .wrangler/e2e && wrangler d1 execute linkforadollar --local --persist-to .wrangler/e2e --file migrations/0003_seed_top_seo_companies.sql && wrangler d1 execute linkforadollar --local --persist-to .wrangler/e2e --command \"UPDATE squares SET status = 'paid', owner_host = replace(replace(substr(url, instr(url, '://') + 3), 'www.', ''), '/', '') WHERE checkout_session_id LIKE 'seed:seo:%'\" && wrangler dev --local --persist-to .wrangler/e2e --port 8791 --var APP_URL:http://127.0.0.1:8791 --var STRIPE_SECRET_KEY:e2e_only --var E2E_TEST_MODE:true",
     "d1:migrate:local": "wrangler d1 migrations apply linkforadollar --local",
     "d1:migrate:remote": "wrangler d1 migrations apply linkforadollar --remote"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "node-addon-api": "^8.8.0",
     "node-gyp": "^12.3.0",
     "wrangler": "^4.95.0"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.2.8",
+    "@resvg/resvg-wasm": "^2.6.2"
   }
 }

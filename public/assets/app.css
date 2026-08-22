@@ -1001,6 +1001,69 @@ body[data-directory-mode="true"] .directory-row__visit {
   text-align: right;
 }
 
+body[data-directory-mode="true"] .directory-row__actions {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+}
+
+body[data-directory-mode="true"] .directory-row__share {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + 8px);
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px;
+  border: 1px solid #dce5e1;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(16, 37, 31, 0.12);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 150ms ease-out, transform 150ms ease-out, visibility 150ms;
+}
+
+body[data-directory-mode="true"] .directory-row:hover .directory-row__share,
+body[data-directory-mode="true"] .directory-row:focus-within .directory-row__share {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+body[data-directory-mode="true"] .directory-row__share-label {
+  padding: 0 3px;
+  color: #5f6f69;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+body[data-directory-mode="true"] .directory-row__share a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #dce5e1;
+  border-radius: 50%;
+  background: #fff;
+  color: #10251f;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+body[data-directory-mode="true"] .directory-row__share a:hover,
+body[data-directory-mode="true"] .directory-row__share a:focus-visible {
+  border-color: #17627d;
+  background: #eaf3f1;
+  outline: none;
+}
+
 body[data-directory-mode="true"] .directory-rows.is-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
@@ -1043,9 +1106,37 @@ body[data-directory-mode="true"] .directory-rows.is-grid .directory-row__metric 
   text-align: left;
 }
 
-body[data-directory-mode="true"] .directory-rows.is-grid .directory-row__visit {
+body[data-directory-mode="true"] .directory-rows.is-grid .directory-row__actions {
   grid-column: 3;
   grid-row: 3;
+}
+
+@media (hover: none) {
+  body[data-directory-mode="true"] .directory-row__actions {
+    align-items: center;
+    gap: 8px;
+  }
+
+  body[data-directory-mode="true"] .directory-row__share {
+    position: static;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: none;
+  }
+
+  body[data-directory-mode="true"] .directory-row__share-label {
+    display: none;
+  }
+
+  body[data-directory-mode="true"] .directory-row__share a {
+    width: 28px;
+    height: 28px;
+  }
 }
 
 .purchase-map-panel {
