@@ -6,14 +6,16 @@ const START_ZOOM = 4;
 const CLUSTER_SIZE = 20;
 const CLAIM_COLORS = ["#b92f20", "#17627d", "#8a5b00", "#48612f", "#6d3fd1", "#a52d68", "#084f96", "#6b4d2e"];
 const CATEGORY_COLORS = {
-  AI: "#6d3fd1",
-  SaaS: "#17627d",
-  Ecommerce: "#b92f20",
-  Agency: "#0b776f",
-  Media: "#a52d68",
-  "Developer tools": "#48612f",
-  Finance: "#6b4d2e",
-  "Local business": "#8a5b00",
+  "SEO & AI Visibility": "#17627d",
+  "AI Agents & Infrastructure": "#48612f",
+  "AI Media Generation": "#a52d68",
+  "Marketing & Advertising": "#b92f20",
+  "Developer Tools": "#084f96",
+  "Ecommerce & Retail": "#b92f20",
+  "Agencies, Studios & Services": "#0b776f",
+  "Business, Finance & Legal": "#6b4d2e",
+  "Media & News": "#a52d68",
+  "Travel, Local & Lifestyle": "#8a5b00",
   Other: "#4f5968",
 };
 
@@ -1108,7 +1110,7 @@ function updateCheckoutButton() {
       : `$${amountDue} gets you listed with a $${currentLevel} total bid. Add $${amountToTop} to take #1 above the current $${highestBid} leader.`;
   }
   checkoutButton.disabled = false;
-  checkoutButton.textContent = `Continue to Stripe · $${amountDue}`;
+  checkoutButton.textContent = `Bid · $${amountDue}`;
   const takeTopButton = document.querySelector("[data-take-top]");
   if (takeTopButton) takeTopButton.textContent = `Take #1 · $${amountToTop}`;
   renderSelectedCard(paidSquares.get(selectedId), selectedId);

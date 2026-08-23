@@ -343,8 +343,10 @@ function stats_page_data(): array
         $categories[$category]['square_count']++;
         $categories[$category]['click_count'] += (int) ($square['click_count'] ?? 0);
     }
-    $categoryRows = array_values($categories);
-    usort($categoryRows, static fn (array $a, array $b): int => ($b['square_count'] <=> $a['square_count']) ?: ($b['click_count'] <=> $a['click_count']));
+    $categoriesByListings = array_values($categories);
+    usort($categoriesByListings, static fn (array $a, array $b): int => ($b['square_count'] <=> $a['square_count']) ?: ($b['click_count'] <=> $a['click_count']) ?: strcmp($a['category'], $b['category']));
+    $categoriesByClicks = array_values($categories);
+    usort($categoriesByClicks, static fn (array $a, array $b): int => ($b['click_count'] <=> $a['click_count']) ?: ($b['square_count'] <=> $a['square_count']) ?: strcmp($a['category'], $b['category']));
 
     return [
         'summary' => [
@@ -357,7 +359,24 @@ function stats_page_data(): array
         'largestOwners' => array_slice($largestOwners, 0, 12),
         'recent' => array_slice($recent, 0, 12),
         'founding' => array_slice($founding, 0, 12),
-        'categories' => array_slice($categoryRows, 0, 12),
+        'categoriesByListings' => array_slice($categoriesByListings, 0, 12),
+        'categoriesByClicks' => array_slice($categoriesByClicks, 0, 12),
+    ];
+}
+
+function marketplace_totals(): array
+{
+    $totals = db()->query(
+        "SELECT
+            (SELECT COALESCE(SUM(click_count), 0) FROM squares WHERE status = 'paid') AS total_clicks,
+            (SELECT COALESCE(SUM(amount_cents), 0) FROM featured_payments) AS total_paid_cents,
+            (SELECT COUNT(*) FROM featured_payments) AS total_bids"
+    )->fetch(PDO::FETCH_ASSOC) ?: [];
+
+    return [
+        'total_clicks' => (int) ($totals['total_clicks'] ?? 0),
+        'total_paid_cents' => (int) ($totals['total_paid_cents'] ?? 0),
+        'total_bids' => (int) ($totals['total_bids'] ?? 0),
     ];
 }
 
@@ -405,20 +424,34 @@ function normalize_description(string $description): string
     return mb_substr(trim($description), 0, 180);
 }
 
+function allowed_categories(): array
+{
+    return [
+        'SEO & AI Visibility', 'AI Agents & Infrastructure', 'AI Media Generation',
+        'Marketing & Advertising', 'Developer Tools', 'Productivity & Personal Tools',
+        'People & Profiles', 'Design & Creative', 'Social Media & Creator Tools',
+        'Writing & Content', 'Sales & Lead Generation', 'Business, Finance & Legal',
+        'Games & Entertainment', 'Education & Learning', 'Health, Fitness & Wellness',
+        'Ecommerce & Retail', 'Directories, Launch & Discovery', 'Hiring, Jobs & Careers',
+        'Audio, Voice & Podcasting', 'Crypto, Web3 & Investing', 'Agencies, Studios & Services',
+        'Security, Privacy & Compliance', 'Travel, Local & Lifestyle', 'Media & News',
+        'Domains & Web Assets', 'Leaderboards & Attention Markets', 'Real Estate & Property',
+        'Other',
+    ];
+}
+
 function normalize_category(string $category): string
 {
-    $allowed = ['AI', 'SaaS', 'Ecommerce', 'Agency', 'Media', 'Developer tools', 'Finance', 'Local business', 'Other'];
     $value = trim($category);
 
-    return in_array($value, $allowed, true) ? $value : 'Other';
+    return in_array($value, allowed_categories(), true) ? $value : 'Other';
 }
 
 function category_from_path(string $value): ?string
 {
-    $allowed = ['AI', 'SaaS', 'Ecommerce', 'Agency', 'Media', 'Developer tools', 'Finance', 'Local business', 'Other'];
     $normalized = strtolower(preg_replace('/\s+/', ' ', str_replace('-', ' ', trim($value))) ?: '');
 
-    foreach ($allowed as $category) {
+    foreach (allowed_categories() as $category) {
         if (strtolower($category) === $normalized) {
             return $category;
         }

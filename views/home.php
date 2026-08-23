@@ -1,8 +1,9 @@
 <?php
 
 $squaresJson = json_encode($paidSquares, JSON_THROW_ON_ERROR);
-$totalTraffic = array_sum(array_map(static fn (array $square): int => (int) ($square['click_count'] ?? 0), $paidSquares));
-$totalPaymentsCents = array_sum(array_map(static fn (array $square): int => (int) ($square['featured_amount_cents'] ?? 0), $paidSquares));
+$totalTraffic = (int) ($marketplaceTotals['total_clicks'] ?? array_sum(array_map(static fn (array $square): int => (int) ($square['click_count'] ?? 0), $paidSquares)));
+$totalPaymentsCents = (int) ($marketplaceTotals['total_paid_cents'] ?? array_sum(array_map(static fn (array $square): int => (int) ($square['featured_amount_cents'] ?? 0), $paidSquares)));
+$totalBids = (int) ($marketplaceTotals['total_bids'] ?? 0);
 
 ?><!doctype html>
 <html lang="en">
@@ -30,34 +31,36 @@ $totalPaymentsCents = array_sum(array_map(static fn (array $square): int => (int
           <h1>The link leaderboard. <em>The highest active bid takes #1.</em></h1>
           <p class="hero-subhead">No ads. No algorithms. Claim a permanent branded listing for $1, then promote it for as long as you choose. Every click lands on your site.</p>
           <section class="inline-claim" id="claimForm" aria-labelledby="claim-form-title">
-            <h2 id="claim-form-title">Choose what you want to pay</h2>
-            <p>Pay from $1 for any available rank, or enter enough to take the top spot.</p>
+            <h2 id="claim-form-title" class="sr-only">Bid for your leaderboard position</h2>
             <form action="/checkout" method="post">
               <input id="label" name="label" type="hidden" value="Website">
-              <input name="category" type="hidden" value="Other">
               <input name="promotion_type" type="hidden" value="bid">
               <div class="bid-amount" aria-labelledby="bid-amount-label">
-                <span id="bid-amount-label">Your payment</span>
+                <span id="bid-amount-label">Choose your bid</span>
                 <div class="bid-stepper">
                   <button type="button" data-adjust-bid="-1" aria-label="Subtract one dollar">−</button>
                   <label class="bid-value" for="payment_level"><span aria-hidden="true">$</span><input id="payment_level" name="payment_level" type="number" min="1" max="999999" step="1" value="1" inputmode="numeric" required aria-describedby="placementPreview"></label>
                   <button type="button" data-adjust-bid="1" aria-label="Add one dollar">+</button>
                 </div>
-                <div class="bid-increments" aria-label="Adjust payment amount">
-                  <button type="button" data-adjust-bid="-10">−$10</button>
-                  <button type="button" data-adjust-bid="-5">−$5</button>
-                  <button type="button" data-adjust-bid="5">+$5</button>
-                  <button type="button" data-adjust-bid="10">+$10</button>
-                  <button class="take-top-button" type="button" data-take-top>Take #1</button>
-                </div>
               </div>
-              <label class="website-input" for="url"><span class="sr-only">Your website</span><input id="url" name="url" type="url" placeholder="https://yourwebsite.com" autocomplete="url" required></label>
+              <div class="website-checkout-row">
+                <label class="website-input" for="url"><span class="sr-only">Your website</span><input id="url" name="url" type="url" placeholder="https://yourwebsite.com" autocomplete="url" required></label>
+                <label class="category-input" for="claimCategory"><span class="sr-only">Choose a category</span><select id="claimCategory" name="category" required><option value="" selected disabled>Choose a category</option><?php foreach (allowed_categories() as $category) : ?><option value="<?= htmlspecialchars($category, ENT_QUOTES) ?>"><?= htmlspecialchars($category, ENT_QUOTES) ?></option><?php endforeach; ?></select></label>
+                <button id="checkoutButton" type="submit">Bid · $1</button>
+              </div>
+              <div class="bid-increments" aria-label="Adjust payment amount">
+                <button type="button" data-adjust-bid="-10">−$10</button>
+                <button type="button" data-adjust-bid="-5">−$5</button>
+                <button type="button" data-adjust-bid="5">+$5</button>
+                <button type="button" data-adjust-bid="10">+$10</button>
+                <button class="take-top-button" type="button" data-take-top>Take #1</button>
+              </div>
               <p id="placementPreview" class="placement-preview" aria-live="polite">$1 gets your website listed. The current #1 amount will appear here.</p>
-              <button id="checkoutButton" type="submit">Continue to Stripe · $1</button>
             </form>
           </section>
           <dl class="lifetime-totals" aria-label="All-time marketplace totals">
             <div><dt>Total paid</dt><dd>$<?= number_format($totalPaymentsCents / 100, $totalPaymentsCents % 100 === 0 ? 0 : 2) ?></dd></div>
+            <div><dt>Total bids</dt><dd><?= number_format($totalBids) ?></dd></div>
             <div><dt>Outbound clicks</dt><dd><?= number_format($totalTraffic) ?></dd></div>
           </dl>
         </div>
@@ -99,15 +102,7 @@ $totalPaymentsCents = array_sum(array_map(static fn (array $square): int => (int
             </div>
             <select id="categoryFilter" aria-label="Filter board by category">
               <option value="All">All categories</option>
-              <option value="AI">AI</option>
-              <option value="SaaS">SaaS</option>
-              <option value="Ecommerce">Ecommerce</option>
-              <option value="Agency">Agency</option>
-              <option value="Media">Media</option>
-              <option value="Developer tools">Developer tools</option>
-              <option value="Finance">Finance</option>
-              <option value="Local business">Local business</option>
-              <option value="Other">Other</option>
+              <?php foreach (allowed_categories() as $category) : ?><option value="<?= htmlspecialchars($category, ENT_QUOTES) ?>"><?= htmlspecialchars($category, ENT_QUOTES) ?></option><?php endforeach; ?>
             </select>
             <div class="view-toggle" role="group" aria-label="Choose board view">
               <button class="view-toggle__button is-active" id="listViewButton" type="button" aria-pressed="true" aria-controls="directoryList">List</button>

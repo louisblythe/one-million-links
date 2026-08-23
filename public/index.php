@@ -29,6 +29,7 @@ try {
     if ($method === 'GET' && $path === '/') {
         render('home', [
             'paidSquares' => paid_squares(),
+            'marketplaceTotals' => marketplace_totals(),
             'selectedSquare' => isset($_GET['square']) ? max(1, min(TOTAL_SQUARES, (int) $_GET['square'])) : 1,
         ]);
     }
@@ -101,6 +102,7 @@ try {
     }
 
     if ($method === 'GET' && $path === '/stats') {
+        header('Cache-Control: no-store');
         render('stats', ['stats' => stats_page_data()]);
     }
 
@@ -171,6 +173,10 @@ try {
         $squareIds = $rebid['square_ids'] !== []
             ? $rebid['square_ids']
             : [reserve_next_listing($label, $description, $url, $category, $email, $logoUrl)];
+        if ($rebid['square_ids'] !== []) {
+            $placeholders = implode(',', array_fill(0, count($squareIds), '?'));
+            db()->prepare("UPDATE squares SET category = ? WHERE status = 'paid' AND square_id IN ($placeholders)")->execute([$category, ...$squareIds]);
+        }
         $squareId = (int) $squareIds[0];
         $piqoVisitorId = piqo_cookie_value('piqo_visitor');
         $piqoSessionId = piqo_cookie_value('piqo_session');
