@@ -65,7 +65,7 @@ assert(weakPages.length === 0, `Pages without internal inbound links: ${weakPage
 const baseUrl = new URL(base);
 const redirectChecks = [
   [`${base}/stats/`, `${base}/stats`],
-  [`${base}/collections/agency`, `${base}/collections/Agency`],
+  [`${base}/collections/agency`, `${base}/collections/Agencies%2C%20Studios%20%26%20Services`],
   [`${base}/rss.xml`, `${base}/feed.xml`],
   [`${base}/recent.json`, `${base}/claims.json`],
 ];

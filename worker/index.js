@@ -1,3 +1,4 @@
+import { MAX_PAYMENT_DOLLARS, reserveListing, releaseReservation, fulfillListingPayment, fulfillSponsorship } from "./payments.js";
 import { APPLE_TOUCH_ICON_PNG_BASE64, OG_IMAGE_PNG_BASE64 } from "./generated-assets.js";
 import { Resvg, initWasm } from "@resvg/resvg-wasm";
 import resvgWasm from "@resvg/resvg-wasm/index_bg.wasm";
@@ -11,7 +12,7 @@ const PUBLIC_HTML_CACHE = "public, max-age=300, s-maxage=600, stale-while-revali
 const LIVE_LEADERBOARD_CACHE = "no-store";
 const ASSET_CACHE = "public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800";
 const VERSIONED_ASSET_CACHE = "public, max-age=31536000, s-maxage=31536000, immutable";
-const ASSET_VERSION = "20260822-total-bids-1";
+const ASSET_VERSION = "20260911-payment-integrity-1";
 const DATAFAST_WEBSITE_ID = "dfid_covNyYU25Nl5a20HXqsd3";
 const DATAFAST_DOMAIN = "linkforadollar.com";
 const PIQO_SITE_ID = "zibyj4ic";
@@ -434,7 +435,6 @@ async function createCheckout(request, env) {
   const email = normalizeEmail(String(form.get("email") || ""));
   const rebid = await rebidContext(env, linkUrl);
   const previousBid = Math.floor(rebid.previousCents / 100);
-  const highestBid = Math.floor(rebid.highestCents / 100);
   const monthlyAmount = promotionType === "monthly"
     ? normalizePaymentLevel(Number(form.get("payment_level") || 30), 1)
     : 0;
@@ -445,14 +445,12 @@ async function createCheckout(request, env) {
   const featuredDays = promotionType === "monthly" ? 30 : amountDue;
   const purchaseLocation = await listingLocationFromRequest(request, String(form.get("country") || ""));
   const isNewListing = rebid.squareIds.length === 0;
-  const squareIds = rebid.squareIds.length
-    ? rebid.squareIds
-    : [await reserveNextListing(env, label, description, linkUrl, category, email, logoUrl)];
-  if (rebid.squareIds.length) {
-    await env.DB.prepare(`UPDATE squares SET category = ? WHERE status = 'paid' AND square_id IN (${squareIds.map(() => "?").join(",")})`)
-      .bind(category, ...squareIds)
-      .run();
-  }
+  const reservation = isNewListing
+    ? await reserveListing(env.DB, { label, description, url: linkUrl, ownerHost: hostFromUrl(linkUrl), category, email, logoUrl })
+    : null;
+  const squareIds = reservation ? [reservation.squareId] : rebid.squareIds;
+  // A public rebid buys more promotion; it does not authorise edits to someone else's listing.
+
   const primarySquareId = squareIds[0];
 
   const body = new URLSearchParams();
@@ -467,6 +465,7 @@ async function createCheckout(request, env) {
   body.set("line_items[0][price_data][product]", env.STRIPE_PRODUCT_ID || "prod_Uam47pbENlHbmX");
   if (promotionType === "monthly") body.set("line_items[0][price_data][recurring][interval]", "month");
   body.set("metadata[square_id]", String(primarySquareId));
+  if (reservation) body.set("metadata[reservation_key]", reservation.reservationKey);
   body.set("metadata[label]", label);
   if (description) body.set("metadata[description]", description);
   body.set("metadata[url]", linkUrl);
@@ -484,6 +483,7 @@ async function createCheckout(request, env) {
     body.set("subscription_data[metadata][square_id]", String(primarySquareId));
     body.set("subscription_data[metadata][monthly_amount_cents]", String(monthlyAmount * 100));
     body.set("subscription_data[metadata][promotion_type]", "monthly");
+    body.set("subscription_data[metadata][url]", linkUrl);
   }
   const piqoVisitorId = piqoCookieValue(request, "piqo_visitor");
   const piqoSessionId = piqoCookieValue(request, "piqo_session");
@@ -507,7 +507,7 @@ async function createCheckout(request, env) {
   }
 
   if (env.E2E_TEST_MODE === "true") {
-    return redirectResponse(`${appUrl(env)}/success?session_id=e2e_${primarySquareId}_${amountDue}_${paymentLevel}`, 303);
+    return redirectResponse(`${appUrl(env)}/success?session_id=e2e_${primarySquareId}_${amountDue}_${featuredDays}_${randomLetters(12)}`, 303);
   }
 
   let response;
@@ -524,12 +524,12 @@ async function createCheckout(request, env) {
     });
     session = await response.json();
   } catch (error) {
-    if (isNewListing) await releasePendingListing(env, primarySquareId);
+    // Keep the reservation on ambiguous network failures; Stripe may have accepted the session.
     throw error;
   }
 
   if (!response.ok || !session.url) {
-    if (isNewListing) await releasePendingListing(env, primarySquareId);
+    if (isNewListing) await releaseReservation(env.DB, primarySquareId, reservation.reservationKey);
     throw new Error(session.error?.message || "Stripe checkout session could not be created.");
   }
 
@@ -609,31 +609,13 @@ async function categorySponsorSuccess(url, env) {
 }
 
 async function markCategorySponsorPaid(env, session, values = null) {
-  const category = values?.category || normalizeCategory(String(session.metadata?.category || ""));
-  const url = values?.url || normalizeUrl(String(session.metadata?.url || ""));
-  const label = values?.label || normalizeLabel(String(session.metadata?.label || ""));
-  const amountDueCents = Number(values?.amountDueCents ?? session.metadata?.amount_due_cents);
-  const totalBidCents = Number(values?.totalBidCents ?? session.metadata?.total_bid_cents);
-  if (!session.id || !Number.isInteger(amountDueCents) || amountDueCents < 100 || !Number.isInteger(totalBidCents) || totalBidCents < 1000) {
-    throw new Error("Category sponsorship metadata is invalid.");
-  }
-  const now = new Date().toISOString();
-  const payment = await env.DB.prepare(
-    `INSERT OR IGNORE INTO category_sponsor_payments
-      (checkout_session_id, category, url, amount_cents, total_bid_cents, created_at)
-      VALUES (?, ?, ?, ?, ?, ?)`,
-  ).bind(session.id, category, url, amountDueCents, totalBidCents, now).run();
-  if (!Number(payment.meta?.changes || 0)) return;
-  await env.DB.prepare(
-    `INSERT INTO category_sponsorships
-      (category, url, label, amount_cents, active_until, created_at, updated_at)
-      VALUES (?, ?, ?, ?, datetime(?, '+30 days'), ?, ?)
-      ON CONFLICT(category, url) DO UPDATE SET
-        label = excluded.label,
-        amount_cents = excluded.amount_cents,
-        active_until = datetime(max(unixepoch(?), unixepoch(category_sponsorships.active_until)), 'unixepoch', '+30 days'),
-        updated_at = excluded.updated_at`,
-  ).bind(category, url, label, totalBidCents, now, now, now, now).run();
+  await fulfillSponsorship(env.DB, {
+    id: session.id,
+    category: values?.category || normalizeCategory(String(session.metadata?.category || "")),
+    url: values?.url || normalizeUrl(String(session.metadata?.url || "")),
+    label: values?.label || normalizeLabel(String(session.metadata?.label || "")),
+    amountCents: Number(values?.amountDueCents ?? session.amount_total),
+  });
 }
 
 async function checkoutSuccess(url, env) {
@@ -642,22 +624,19 @@ async function checkoutSuccess(url, env) {
     return notFoundResponse("That checkout confirmation does not exist.", env);
   }
 
-  if (env.E2E_TEST_MODE === "true" && /^e2e_\d+_\d+_\d+$/.test(sessionId)) {
-    const [, primaryIdValue, featuredDaysValue, paymentLevelValue] = sessionId.split("_");
+  if (env.E2E_TEST_MODE === "true" && /^e2e_\d+_\d+_\d+_[a-z]{12}$/.test(sessionId)) {
+    const [, primaryIdValue, amountValue, daysValue] = sessionId.split("_");
     const primaryId = validateSquareId(Number(primaryIdValue));
-    const primary = await env.DB.prepare("SELECT territory_key FROM squares WHERE square_id = ? AND status = 'pending'").bind(primaryId).first();
-    if (!primary) {
-      return notFoundResponse("That checkout confirmation does not exist.", env);
-    }
-    const rows = primary.territory_key
-      ? await env.DB.prepare("SELECT square_id FROM squares WHERE territory_key = ? AND status = 'pending' ORDER BY square_id").bind(primary.territory_key).all()
-      : { results: [{ square_id: primaryId }] };
-    const squareIds = (rows.results || []).map((row) => Number(row.square_id));
-    await markSquaresPaid(env, squareIds, sessionId, "e2e_payment", Number(featuredDaysValue), Number(paymentLevelValue) * 100);
-    const claimedSquares = (await paidSquares(env)).filter((square) => squareIds.includes(Number(square.square_id)));
+    const primary = await env.DB.prepare("SELECT url, territory_key FROM squares WHERE square_id = ?").bind(primaryId).first();
+    if (!primary) return notFoundResponse("That checkout confirmation does not exist.", env);
+    await fulfillListingPayment(env.DB, {
+      id: sessionId, squareIds: [primaryId], amountCents: Number(amountValue) * 100,
+      featuredDays: Number(daysValue), expectedUrl: primary.url, reservationKey: primary.territory_key,
+      paymentIntentId: "e2e_payment",
+    });
+    const claimedSquares = (await paidSquares(env)).filter((square) => Number(square.square_id) === primaryId);
     return html(successPage(claimedSquares, env, {
-      id: sessionId,
-      amountTotal: Number(paymentLevelValue) * 100,
+      id: sessionId, amountTotal: Number(amountValue) * 100,
       currency: String(env.APP_CURRENCY || "usd").toLowerCase(),
     }), 200, "no-store", NOINDEX_HEADERS);
   }
@@ -676,7 +655,7 @@ async function checkoutSuccess(url, env) {
   }
 
   const claimedSquareIds = metadataSquareIds(session);
-  await markSquaresPaid(env, claimedSquareIds, session.id, session.payment_intent || null, metadataFeaturedDays(session), metadataTotalBidCents(session), metadataPurchaseLocation(session), metadataLogoUrl(session));
+  await fulfillCheckoutSession(env, session);
 
   const claimedSquares = claimedSquareIds.length
     ? (await paidSquares(env)).filter((square) => claimedSquareIds.includes(Number(square.square_id)))
@@ -705,12 +684,12 @@ async function stripeWebhook(request, env) {
 
   const event = JSON.parse(payload);
 
-  if (event.type === "checkout.session.completed" && event.data?.object?.payment_status === "paid") {
+  if ((event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") && event.data?.object?.payment_status === "paid") {
     const session = event.data.object;
     if (session.metadata?.purchase_type === "category_sponsor") {
       await markCategorySponsorPaid(env, session);
     } else {
-      await markSquaresPaid(env, metadataSquareIds(session), session.id, session.payment_intent || null, metadataFeaturedDays(session), metadataTotalBidCents(session), metadataPurchaseLocation(session), metadataLogoUrl(session));
+      await fulfillCheckoutSession(env, session);
     }
   }
 
@@ -721,32 +700,27 @@ async function stripeWebhook(request, env) {
   return json({ received: true });
 }
 
+async function fulfillCheckoutSession(env, session) {
+  await fulfillListingPayment(env.DB, {
+    id: session.id, squareIds: metadataSquareIds(session),
+    amountCents: Number(session.amount_total), featuredDays: metadataFeaturedDays(session),
+    expectedUrl: normalizeUrl(String(session.metadata?.url || "")),
+    reservationKey: session.metadata?.reservation_key || null,
+    paymentIntentId: session.payment_intent || null,
+    location: metadataPurchaseLocation(session), logoUrl: metadataLogoUrl(session),
+  });
+}
+
 async function applyRecurringInvoice(env, invoice) {
   const metadata = invoice.parent?.subscription_details?.metadata || {};
   if (metadata.promotion_type !== "monthly") return;
   const squareId = validateSquareId(Number(metadata.square_id));
-  const monthlyAmountCents = Number(metadata.monthly_amount_cents);
-  if (!invoice.id || !Number.isInteger(monthlyAmountCents) || monthlyAmountCents < 100 || monthlyAmountCents > 1_000_000) {
-    throw new Error("Recurring rank invoice metadata is invalid.");
-  }
-
-  const listing = await env.DB.prepare("SELECT featured_amount_cents FROM squares WHERE square_id = ? AND status = 'paid'").bind(squareId).first();
-  if (!listing) throw new Error("Recurring rank listing does not exist.");
-  const paidAt = new Date().toISOString();
-  const nextTotalBidCents = Number(listing.featured_amount_cents || 0) + monthlyAmountCents;
-  const payment = await env.DB.prepare(
-    `INSERT OR IGNORE INTO featured_payments (checkout_session_id, square_id, amount_cents, total_bid_cents, created_at)
-      VALUES (?, ?, ?, ?, ?)`,
-  ).bind(`invoice:${invoice.id}`, squareId, monthlyAmountCents, nextTotalBidCents, paidAt).run();
-  if (!Number(payment.meta?.changes || 0)) return;
-
-  await env.DB.prepare(
-    `UPDATE squares
-      SET featured_from = ?,
-          featured_until = strftime('%Y-%m-%dT%H:%M:%fZ', max(unixepoch(?), COALESCE(unixepoch(featured_until), 0)), 'unixepoch', '+30 days'),
-          featured_amount_cents = ?
-      WHERE square_id = ?`,
-  ).bind(paidAt, paidAt, nextTotalBidCents, squareId).run();
+  const listing = await env.DB.prepare("SELECT url FROM squares WHERE square_id = ? AND status = 'paid'").bind(squareId).first();
+  if (!listing || !invoice.id) throw new Error("Recurring rank listing does not exist.");
+  await fulfillListingPayment(env.DB, {
+    id: `invoice:${invoice.id}`, squareIds: [squareId], amountCents: Number(invoice.amount_paid),
+    featuredDays: 30, expectedUrl: metadata.url || listing.url, recurring: true,
+  });
 }
 
 async function rebidContext(env, url) {
@@ -775,129 +749,6 @@ async function rebidContext(env, url) {
     previousCents: Number(primary.featured_amount_cents || 0),
     highestCents: Number(highest?.amount || 0),
   };
-}
-
-async function reserveSquares(env, squareId, packSize, label, description, url, category, email, logoUrl = null) {
-  const squareIds = adjacentSquareIds(squareId, packSize);
-  const placeholders = squareIds.map(() => "?").join(",");
-  const existing = await env.DB.prepare(`SELECT square_id FROM squares WHERE status = 'paid' AND square_id IN (${placeholders})`).bind(...squareIds).first();
-
-  if (existing) {
-    throw new Error("That listing position is no longer available.");
-  }
-
-  const territoryKey = crypto.randomUUID();
-  const verifiedCompany = companyIsVerified(url, email) ? 1 : 0;
-  const ownerHost = hostFromUrl(url);
-  const createdAt = new Date().toISOString();
-  const statement = env.DB.prepare(
-    `INSERT INTO squares (square_id, label, description, url, owner_host, category, owner_email, verified_company, territory_key, territory_size, logo_url, status, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
-      ON CONFLICT(square_id) DO UPDATE SET
-        label = excluded.label,
-        description = excluded.description,
-        url = excluded.url,
-        owner_host = excluded.owner_host,
-        category = excluded.category,
-        owner_email = excluded.owner_email,
-        verified_company = excluded.verified_company,
-        territory_key = excluded.territory_key,
-        territory_size = excluded.territory_size,
-        logo_url = excluded.logo_url,
-        status = 'pending',
-        created_at = excluded.created_at`,
-  );
-
-  await env.DB.batch(squareIds.map((id) => statement.bind(id, label, description || null, url, ownerHost, category, email, verifiedCompany, territoryKey, squareIds.length, logoUrl, createdAt)));
-
-  return squareIds;
-}
-
-async function reserveNextListing(env, label, description, url, category, email, logoUrl = null) {
-  const row = await env.DB.prepare(
-    `WITH RECURSIVE candidate(square_id) AS (
-      SELECT 0
-      UNION ALL
-      SELECT square_id + 1 FROM candidate WHERE square_id < ${TOTAL_SQUARES - 1}
-    )
-    SELECT candidate.square_id FROM candidate
-    LEFT JOIN squares ON squares.square_id = candidate.square_id
-    WHERE squares.square_id IS NULL
-    LIMIT 1`,
-  ).first();
-  const squareId = Number(row?.square_id);
-
-  if (!Number.isInteger(squareId)) {
-    throw new Error("The listing directory is full.");
-  }
-
-  const [reservedId] = await reserveSquares(env, squareId, 1, label, description, url, category, email, logoUrl);
-  return reservedId;
-}
-
-async function releasePendingListing(env, squareId) {
-  await env.DB.prepare("DELETE FROM squares WHERE square_id = ? AND status = 'pending'").bind(validateSquareId(squareId)).run();
-}
-
-async function markSquaresPaid(env, squareIds, checkoutSessionId, paymentIntentId, featuredDays = 0, totalBidCents = 0, purchaseLocation = null, logoUrl = null) {
-  const paidAt = new Date().toISOString();
-  const statement = env.DB.prepare(
-    `UPDATE squares
-      SET status = 'paid',
-          checkout_session_id = ?,
-          payment_intent_id = ?,
-          paid_at = COALESCE(paid_at, ?)
-      WHERE square_id = ?`,
-  );
-
-  await env.DB.batch(squareIds.map((squareId) => {
-    const id = validateSquareId(squareId);
-    const storedCheckoutSessionId = squareIds.length > 1 ? `${checkoutSessionId}:${id}` : checkoutSessionId;
-
-    return statement.bind(storedCheckoutSessionId, paymentIntentId, paidAt, id);
-  }));
-
-  if (logoUrl && squareIds.length > 0) {
-    await env.DB.prepare("UPDATE squares SET logo_url = ? WHERE square_id = ?").bind(logoUrl, validateSquareId(squareIds[0])).run();
-  }
-
-  if (purchaseLocation && squareIds.length > 0) {
-    await env.DB.prepare(
-      `UPDATE squares SET
-        purchase_city = ?,
-        purchase_country = ?,
-        purchase_latitude = ?,
-        purchase_longitude = ?,
-        location_source = ?
-      WHERE square_id = ?`,
-    ).bind(purchaseLocation.city, purchaseLocation.country, purchaseLocation.latitude, purchaseLocation.longitude, purchaseLocation.source || "country_centroid", validateSquareId(squareIds[0])).run();
-  }
-
-  if (featuredDays > 0 && squareIds.length > 0) {
-    const primaryId = validateSquareId(squareIds[0]);
-    const payment = await env.DB.prepare(
-      `INSERT OR IGNORE INTO featured_payments (checkout_session_id, square_id, amount_cents, total_bid_cents, created_at)
-        VALUES (?, ?, ?, ?, ?)`,
-    ).bind(checkoutSessionId, primaryId, featuredDays * 100, totalBidCents, paidAt).run();
-
-    if (!Number(payment.meta?.changes || 0)) {
-      return;
-    }
-
-    const schedule = env.DB.prepare(
-      `UPDATE squares
-        SET featured_from = ?,
-            featured_until = strftime('%Y-%m-%dT%H:%M:%fZ', max(unixepoch(?), COALESCE(unixepoch(featured_until), 0)), 'unixepoch', '+' || ? || ' days'),
-            featured_amount_cents = max(COALESCE(featured_amount_cents, 0), ?)
-        WHERE square_id = ?`,
-    );
-
-    await schedule.bind(paidAt, paidAt, featuredDays, Math.max(totalBidCents, featuredDays * 100), primaryId).run();
-  }
-}
-
-async function markSquarePaid(env, squareId, checkoutSessionId, paymentIntentId) {
-  await markSquaresPaid(env, [squareId], checkoutSessionId, paymentIntentId);
 }
 
 function validateSquareId(squareId) {
@@ -930,7 +781,13 @@ function normalizeCategory(category) {
 
 function categoryFromPath(value) {
   const normalized = value.trim().replace(/-/g, " ").replace(/\s+/g, " ").toLowerCase();
-  return CATEGORIES.find((category) => category.toLowerCase() === normalized) || null;
+  const legacyCategories = {
+    ai: "AI Agents & Infrastructure", saas: "Productivity & Personal Tools",
+    ecommerce: "Ecommerce & Retail", agency: "Agencies, Studios & Services",
+    media: "Media & News", finance: "Business, Finance & Legal",
+    "local business": "Travel, Local & Lifestyle",
+  };
+  return CATEGORIES.find((category) => category.toLowerCase() === normalized) || legacyCategories[normalized] || null;
 }
 
 function normalizePackSize(packSize) {
@@ -938,7 +795,7 @@ function normalizePackSize(packSize) {
 }
 
 function normalizePaymentLevel(paymentLevel, minimum) {
-  if (!Number.isInteger(paymentLevel) || paymentLevel < minimum || paymentLevel > 999999) {
+  if (!Number.isInteger(paymentLevel) || paymentLevel < minimum || paymentLevel > MAX_PAYMENT_DOLLARS) {
     throw new Error(`Choose a whole-dollar payment amount between $${minimum} and $999,999.`);
   }
 
@@ -992,7 +849,10 @@ function metadataSquareIds(session) {
 
 function metadataFeaturedDays(session) {
   const value = Number(session.metadata?.featured_days || 0);
-  return Number.isInteger(value) && value >= 1 && value <= 10000 ? value : 0;
+  if (!Number.isInteger(value) || value < 1 || value > MAX_PAYMENT_DOLLARS) {
+    throw new Error("Featured duration is invalid.");
+  }
+  return value;
 }
 
 function metadataTotalBidCents(session) {

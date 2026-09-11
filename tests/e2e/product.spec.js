@@ -107,6 +107,24 @@ test.describe("public discovery", () => {
     await expect(page.getByText(label, { exact: true })).toBeVisible();
   });
 
+  test("repeat bids add credit while preserving the paid listing category", async ({ page, request }) => {
+    const before = (await (await request.get("/api/squares")).json()).squares.find(square => square.url === "https://www.webfx.com/");
+    expect(before).toBeTruthy();
+    for (let i = 0; i < 2; i++) {
+      await page.goto("/");
+      await page.locator("#url").fill(before.url);
+      await page.locator("#claimCategory").selectOption("Other");
+      await page.locator("#payment_level").fill("5");
+      await page.locator("#checkoutButton").click();
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText("Square claimed");
+      await page.reload();
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText("Square claimed");
+    }
+    const after = (await (await request.get("/api/squares")).json()).squares.find(square => square.square_id === before.square_id);
+    expect(after.category).toBe(before.category);
+    expect(after.featured_amount_cents).toBe(Number(before.featured_amount_cents || 0) + 1000);
+  });
+
   test("category sponsors bid for a fixed-term ranked placement", async ({ page }) => {
     await page.goto("/collections/Agencies%2C%20Studios%20%26%20Services");
     await expect(page.getByRole("heading", { name: "Agencies, Studios & Services sponsors" })).toBeVisible();
@@ -195,6 +213,9 @@ test.describe("content, rankings, and machine-readable surfaces", () => {
     }
     expect((await request.get("/rss.xml", { maxRedirects: 0 })).status()).toBe(301);
     expect((await request.get("/recent.json", { maxRedirects: 0 })).status()).toBe(301);
+    const legacyCategory = await request.get("/collections/agency", { maxRedirects: 0 });
+    expect(legacyCategory.status()).toBe(301);
+    expect(legacyCategory.headers().location).toBe("http://127.0.0.1:8791/collections/Agencies%2C%20Studios%20%26%20Services");
     for (const path of ["/not-found", "/squares/1000001", "/leaderboards/nope", "/collections/nonsense", "/success"]) {
       const response = await request.get(path);
       expect(response.status(), path).toBe(404);

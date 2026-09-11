@@ -11,3 +11,6 @@ Covered flows:
 - Responsive acceptance: mobile directory, claim modal, stats, map, and horizontal-overflow guard.
 
 The real Stripe hosted UI remains Stripe-owned. Production payment integration is exercised up to and after that boundary using the same reservation and fulfilment code paths; webhook signature correctness remains a server-side integration concern rather than a browser flow.
+
+
+`npm run test:payments` exercises the payment helpers against isolated Miniflare D1, including concurrent reservations, reservation-specific cleanup, unpaid and paid rebids, transaction rollback and retry, stale concurrent bids, amount boundaries through $999,999, monthly renewal accounting, sponsorship concurrency, and signed immediate/delayed-payment webhooks. The browser suite also checks repeated rebids and legacy category redirects.

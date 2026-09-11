@@ -24,7 +24,9 @@ npx wrangler secret put STRIPE_SECRET_KEY
 npx wrangler secret put STRIPE_WEBHOOK_SECRET
 ```
 
-Checkout uses Stripe product `prod_Uam47pbENlHbmX` and creates a one-time price from the buyer's chosen cumulative bid. The bid must beat the highest active bid by at least $1 and cannot exceed $10,000. Returning buyers enter the exact same destination URL; their previous bid is credited and Stripe charges only the difference. Each newly paid dollar adds one day of featured time, and the highest active cumulative bid ranks #1.
+Checkout uses Stripe product `prod_Uam47pbENlHbmX` and charges the entered payment amount ($1–$999,999). Each successful one-time payment adds its actual charged amount to the listing's cumulative bid and one featured day per dollar. Returning buyers enter the exact same destination URL to add credit; public rebids preserve the existing listing's category, branding, and location. The highest active cumulative bid ranks #1.
+
+Reservations are allocated atomically and new Checkout sessions carry a reservation key. Payment fulfilment, rank updates, and deduplication records commit together in a D1 transaction, including category sponsorships and monthly renewals. Ambiguous Stripe network failures retain the reservation so a potentially payable session cannot later publish another buyer's listing. These changes require no database migration.
 
 The premium directory supports list, card-grid, and world-map modes from the same page shell. The map uses MapLibre GL JS with OpenFreeMap tiles. New Worker checkouts round Cloudflare purchase coordinates to two decimals and store only city, country, latitude, and longitude through Stripe metadata; IP addresses are not stored.
 
@@ -63,4 +65,16 @@ Point Stripe webhooks at:
 https://linkforadollar.com/stripe/webhook
 ```
 
-Listen for both `checkout.session.completed` and `invoice.paid`. Checkout completion publishes the first paid rank bid; successful recurring invoices add the selected monthly amount to the cumulative bid. The renewal handler ignores `subscription_create` invoices and records invoice IDs idempotently so the initial payment and webhook retries cannot double-bump rank.
+Listen for `checkout.session.completed`, `checkout.session.async_payment_succeeded`, and `invoice.paid`. Checkout completion publishes the first paid rank bid; successful recurring invoices add the selected monthly amount to the cumulative bid. The renewal handler ignores `subscription_create` invoices and records invoice IDs idempotently so the initial payment and webhook retries cannot double-bump rank.
+
+
+## Validation
+
+```bash
+npm run test:payments
+npm run test:leaderboard-contract
+npm run test:e2e
+SEO_BASE_URL=http://127.0.0.1:8791 npm run test:seo
+```
+
+The SEO audit requires a running Worker at the selected URL. Payment regression tests use isolated local D1 via Miniflare and simulate Stripe responses, signed webhook deliveries, concurrent requests, and database failures. They do not charge cards or prove production provider configuration.
