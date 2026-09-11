@@ -143,6 +143,11 @@ test.describe("public discovery", () => {
 
 test.describe("content, rankings, and machine-readable surfaces", () => {
   test("leaderboard handles zero, partial, and full traffic podiums truthfully", async ({ page, request }) => {
+    const fixture = await request.post("/checkout", { form: {
+      label: "Leaderboard fixture", url: `https://leaderboard-${Date.now()}.example/`,
+      category: "Other", payment_level: "1",
+    } });
+    expect(fixture.ok()).toBeTruthy();
     const response = await page.goto("/stats");
     expect(response.headers()["cache-control"]).toBe("no-store");
     await expect(page.locator(".podium-empty")).toContainText("The throne is open");
