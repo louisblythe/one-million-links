@@ -2,13 +2,13 @@ import { after, before, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import vm from 'node:vm';
-import { Miniflare } from 'miniflare';
+import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 import * as payments from '../worker/payments.js';
 
 let runtime, db, env, worker, stripe;
 before(async () => {
-  runtime = new Miniflare({ modules: true, script: 'export default { fetch() { return new Response("test"); } }',
-    compatibilityDate: '2026-05-27', d1Databases: { DB: 'payments-test' } });
+  runtime = new Miniflare(convertV4MiniflareOptions({ modules: true, script: 'export default { fetch() { return new Response("test"); } }',
+    compatibilityDate: '2026-05-27', d1Databases: { DB: 'payments-test' } }));
   db = await runtime.getD1Database('DB');
   for (const name of readdirSync('migrations').sort()) {
     if (!name.endsWith('.sql') || name.includes('seed')) continue;

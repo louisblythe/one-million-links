@@ -19,13 +19,43 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
-    "miniflare": "4.20260526.0",
+    "miniflare": "5.20261019.1-beta",
     "node-addon-api": "^8.8.0",
     "node-gyp": "^12.3.0",
-    "wrangler": "^4.95.0"
+    "wrangler": "^4.151.3"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
     "@resvg/resvg-wasm": "^2.6.2"
-  }
+  },
+  "overrides": {
+    "hono": "4.13.13",
+    "ip-address": "10.7.4",
+    "launch-editor": "2.14.2",
+    "proxy-addr": "2.0.8",
+    "qs": "6.16.1",
+    "seroval": "1.7.0",
+    "shell-quote": "1.12.0",
+    "source-map-js": "1.2.2",
+    "undici": "7.30.1",
+    "fast-uri@^3": "3.1.9",
+    "js-yaml@^4": "4.3.2",
+    "brace-expansion@^1": "1.1.21",
+    "brace-expansion@^2": "2.1.7",
+    "brace-expansion@^3": "3.0.9",
+    "brace-expansion@^4": "5.0.12",
+    "brace-expansion@^5": "5.0.12",
+    "tar": "7.5.22",
+    "ws": "8.22.0",
+    "sharp": "0.35.5",
+    "dompurify": "3.4.17",
+    "browserslist": "4.29.4",
+    "baseline-browser-mapping": "2.11.30",
+    "postcss-selector-parser": "7.1.7",
+    "yaml": "2.9.1",
+    "basic-ftp": "6.2.3",
+    "katex": "0.19.0",
+    "miniflare": "5.20261019.1-beta"
+  },
+  "packageManager": "npm@10.9.9"
 }

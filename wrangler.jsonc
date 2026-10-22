@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "linkforadollar",
+  "preview_urls": false,
   "account_id": "b516ddd12e9d176c6a29d061f0d2b7a6",
   "main": "worker/index.js",
   "compatibility_date": "2026-05-27",
